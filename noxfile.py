@@ -50,6 +50,15 @@ def check_types(session: nox.Session):
 @nox.session(python=PYTHON, reuse_venv=True)
 def build_and_deploy_docs(session: nox.Session):
     """Deploy docs to GitHub Pages."""
-    session.run_install("uv", "sync", "--group", "docs", "--no-dev")
+    session.run_install(
+        "uv",
+        "sync",
+        "--group",
+        "docs",
+        env={
+            "UV_PROJECT_ENVIRONMENT": session.virtualenv.location,
+            "UV_LINK_MODE": "copy",
+        },
+    )
     session.run("mkdocs", "gh-deploy")
-    session.run("rm", "-rf", "docs_build")
+    session.run("rm", "-rf", "docs_build", external=True)
