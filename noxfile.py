@@ -61,8 +61,6 @@ def build_and_deploy_docs(session: nox.Session):
     session.run_install(
         "uv",
         "sync",
-        "--group",
-        "docs",
         env={
             "UV_PROJECT_ENVIRONMENT": session.virtualenv.location,
             "UV_LINK_MODE": "copy",
