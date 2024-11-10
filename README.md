@@ -1,6 +1,6 @@
-# llm_toolz
+# llmz
 
-This is the repository for the llm_toolz Python package.
+This is the repository for the llmz Python package.
 
 ## Developer Setup
 
@@ -39,7 +39,7 @@ nox > python -m pip install '.[dev]'
 nox > pytest 
 ======================================== test session starts ========================================
 platform darwin -- Python 3.10.2, pytest-7.4.2, pluggy-1.3.0
-rootdir: /Users/.../llm_toolz
+rootdir: /Users/.../llmz
 configfile: pyproject.toml
 testpaths: tests
 collected 1 item                                                                                                                                                         

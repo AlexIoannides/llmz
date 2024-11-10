@@ -1,63 +1,44 @@
 [project]
-name = "llm_toolz"
+name = "llmz"
 version = "0.1.0.dev0"
-description = "The llm_toolz Python package."
+description = "The llmz Python package."
 readme = "README.md"
-authors = [
-  { name="MY_NAME", email="alex@bodywork.com" },
-]
+requires-python = ">=3.12"
 dependencies = [
-  "torch==2.2.2",
-  "tiktoken==0.6.0",
-]
-
-[project.optional-dependencies]
-dev = [
-  "black==23.9.1",
-  "python-dotenv>=1.0.0",
-  "icecream",
-  "ipython",
-  "mypy==1.5.1",
-  "nox==2024.3.2",
-  "pytest==7.4.2",
-  "ruff==0.0.290",
-]
-deploy = [
-  "build>=1.0.0",
-  "pip>=23.2.0",
-  "setuptools>=68.0.0",
-  "twine>=4.0.0",
-  "wheel>=0.41.0",
-]
-docs = [
-  "mkdocs==1.5.3",
-  "mkdocstrings[python]==0.24.1",
-  "mkdocs-material==9.5.15",
+    "torch>=2.5.1",
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/AlexIoannides/llm-toolz"
-"Bug Tracker" = "https://github.com/AlexIoannides/llm-toolz/issues"
-"Docs" = "http://alexioannides.com/llm-toolz/"
+"Homepage" = "https://github.com/AlexIoannides/llmz"
+"Bug Tracker" = "https://github.com/AlexIoannides/llmz/issues"
+"Docs" = "http://alexioannides.com/llmz/"
+
+[dependency-groups]
+dev = [
+    "black>=24.10.0",
+    "icecream>=2.1.3",
+    "mypy>=1.13.0",
+    "nox>=2024.10.9",
+    "pytest>=8.3.3",
+    "ruff>=0.7.3",
+]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.5.44",
+    "mkdocstrings[python]>=0.27.0",
+]
 
 [build-system]
-requires = ["setuptools>=68.0"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-include-package-data = true
-
-[tool.setuptools.packages.find]
-where = ["src"]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.black]
 line-length = 88
 
 [tool.ruff]
 src = ["src"]
-target-version = "py310"
 line-length = 88
-select = [
+lint.select = [
   "D",   # pydocstyle
   "E",   # pycodestyle errors
   "F",   # pyflakes
@@ -65,12 +46,12 @@ select = [
   "UP",  # pyupgrade
   "W",   # pycodestyle warnings
 ]
-ignore = [
+lint.ignore = [
   "D203",    # fix pydocstyle warning
   "D213",    # fix pydocstyle warning
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/*" = [
   "D103",
 ]
