@@ -1,7 +1,7 @@
-site_name: llm-toolz
+site_name: llmz
 copyright: Copyright &copy; 2024 Alex Ioannides
-repo_url: https://github.com/AlexIoannides/llm-toolz
-repo_name: alexioannides/llm-toolz
+repo_url: https://github.com/AlexIoannides/llmz
+repo_name: alexioannides/llmz
 docs_dir: docs
 site_dir: docs_build
 

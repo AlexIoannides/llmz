@@ -1,5 +1,6 @@
 """Dummy tests."""
-from llm_toolz.hello_world import message
+
+from llmz.hello_world import message
 
 
 def test_message():
