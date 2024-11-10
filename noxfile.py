@@ -6,6 +6,7 @@ nox.options.default_venv_backend = "uv"
 nox.options.sessions = [
     "check_code_formatting",
     "check_types",
+    "test_docs_build",
     "run_tests",
 ]
 
@@ -45,6 +46,13 @@ def check_code_formatting(session: nox.Session):
 def check_types(session: nox.Session):
     """Run static type checking."""
     session.run("mypy", "src", "tests", "noxfile.py", external=True)
+
+
+@nox.session(python=False)
+def test_docs_build(session: nox.Session):
+    """Ensure docs can be built."""
+    session.run("mkdocs", "build")
+    session.run("rm", "-rf", "docs_build", external=True)
 
 
 @nox.session(python=PYTHON, reuse_venv=True)

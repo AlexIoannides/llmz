@@ -29,6 +29,9 @@ jobs:
     - name: Run static type checking
       run: |
         uv run nox -s check_types
+    - name: Ensure docs build
+      run: |
+        uv run nox -s test_docs_build
     - name: Run tests
       run: |
         uv run nox -s run_tests-${{ matrix.python-version }}

@@ -25,6 +25,7 @@ Sessions defined in /Users/.../noxfile.py:
 - format_code -> Lint code and re-format where necessary.
 * check_code_formatting -> Check code for formatting errors.
 * check_types -> Run static type checking.
+* build_docs -> Ensure docs can be built.
 - build_and_deploy-3.12 -> Build wheel and deploy to PyPI.
 
 sessions marked with * are selected, sessions marked with - are skipped.
