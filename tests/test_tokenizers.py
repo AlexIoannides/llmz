@@ -3,7 +3,7 @@
 import pytest
 import tiktoken
 
-from llmz.tokenizers import GPTSmallTextDataset
+from llmz.datasets import GPTSmallTextDataset
 
 
 @pytest.mark.parametrize("stride", [1, 2, 3])
