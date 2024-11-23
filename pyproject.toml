@@ -46,6 +46,7 @@ lint.select = [
   "W",   # pycodestyle warnings
 ]
 lint.ignore = [
+  "D105",    # fix pydocstyle warning    
   "D203",    # fix pydocstyle warning
   "D213",    # fix pydocstyle warning
 ]
