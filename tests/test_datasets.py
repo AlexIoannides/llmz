@@ -2,6 +2,7 @@
 
 import pytest
 import tiktoken
+import torch
 
 from llmz.datasets import GPTSmallTextDataset
 
@@ -37,3 +38,17 @@ def test_GPTDataset_raises_errors():
 
     with pytest.raises(RuntimeError, match="max_length"):
         GPTSmallTextDataset(text, max_len)
+
+
+def test_GPTDataset_create_data_loader():
+    text = "Attacks ships off the shoulder of Orion."
+
+    dataloader = GPTSmallTextDataset(text, max_length=3, stride=1).create_data_loader(
+        batch_size=2
+    )
+    dataloader_iter = iter(dataloader)
+    b0_X, b0_y = next(dataloader_iter)
+    b1_X, b1_y = next(dataloader_iter)
+
+    exp_size = torch.Size([2, 3])
+    assert b0_X.size() == b1_X.size() == b0_y.size() == b1_y.size() == exp_size
