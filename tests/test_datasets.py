@@ -8,7 +8,7 @@ from llmz.datasets import GPTSmallTextDataset
 
 
 @pytest.mark.parametrize("stride", [1, 2, 3])
-def test_GPTDataset_encodes_data(stride: int):
+def test_GPTSmallTextDataset_encodes_data(stride: int):
     text = "Attacks ships off the shoulder of Orion."
     max_len = 3
 
@@ -32,7 +32,7 @@ def test_GPTDataset_encodes_data(stride: int):
     assert y_1[-1] == exp_tokens[stride + max_len]
 
 
-def test_GPTDataset_raises_errors():
+def test_GPTSmallTextDataset_raises_errors():
     text = "Attacks ships off the shoulder of Orion."
     max_len = 9
 
@@ -40,13 +40,11 @@ def test_GPTDataset_raises_errors():
         GPTSmallTextDataset(text, max_len)
 
 
-def test_GPTDataset_create_data_loader():
+def test_GPTSmallTextDataset_create_data_loader():
     text = "Attacks ships off the shoulder of Orion."
 
-    dataloader = GPTSmallTextDataset(text, max_length=3, stride=1).create_data_loader(
-        batch_size=2
-    )
-    dataloader_iter = iter(dataloader)
+    dataset = GPTSmallTextDataset(text, max_length=3, stride=1)
+    dataloader_iter = iter(dataset.create_data_loader(batch_size=2))
     b0_X, b0_y = next(dataloader_iter)
     b1_X, b1_y = next(dataloader_iter)
 
