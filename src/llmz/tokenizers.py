@@ -23,14 +23,18 @@ class GPTSmallTextDataset(Dataset):
         """
         tokenizer = tiktoken.get_encoding("gpt2")
         tokens = tokenizer.encode(text)
-        n_instances = len(tokens) - max_length
+
+        n_tokens = len(tokens)
+        n_instances = int((n_tokens - max_length) / stride)
+        if n_instances == 0:
+            raise RuntimeError("max_length + stride <= number of tokens")
 
         self._X = torch.ones((n_instances, max_length))
         self._y = torch.ones((n_instances, max_length))
 
-        for i in range(0, n_instances, stride):
-            self._X[i,] = torch.tensor(tokens[i : i + max_length])
-            self._y[i,] = torch.tensor(tokens[i + 1 : i + max_length + 1])
+        for n, i in enumerate(range(0, n_tokens - max_length, stride)):
+            self._X[n,] = torch.tensor(tokens[i : i + max_length])
+            self._y[n,] = torch.tensor(tokens[i + 1 : i + max_length + 1])
 
     def __len__(self) -> int:
         return self._X.size(0)
