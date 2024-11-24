@@ -5,7 +5,8 @@ description = "The llmz Python package."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "torch>=2.5.1",
+    "tiktoken==0.8.*",
+    "torch==2.5.*",
 ]
 
 [project.urls]
@@ -45,6 +46,7 @@ lint.select = [
   "W",   # pycodestyle warnings
 ]
 lint.ignore = [
+  "D105",    # fix pydocstyle warning    
   "D203",    # fix pydocstyle warning
   "D213",    # fix pydocstyle warning
 ]
