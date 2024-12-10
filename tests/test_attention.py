@@ -15,7 +15,7 @@ def test_Attention_output_size():
     tokens_batch = torch.ones(batch_size, chunk_size, dtype=torch.int32)
     embeddings_batch = nn.Embedding(10, embedding_dim)(tokens_batch)
 
-    attention = Attention()
+    attention = Attention(embeddings_batch, attention_out_dim, chunk_size)
     out_batch = attention(embeddings_batch)
 
-    assert out_batch.Size() == torch.Size(batch_size, chunk_size, embedding_dim)
+    assert out_batch.size() == torch.Size((batch_size, chunk_size, embedding_dim))
