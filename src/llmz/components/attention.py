@@ -4,7 +4,7 @@ import torch
 from torch import nn
 
 
-class Attention(nn.Module):
+class MultiHeadAttention(nn.Module):
     """Basic attention block."""
 
     def __init__(
@@ -12,6 +12,9 @@ class Attention(nn.Module):
         ):
         """Initialise model."""
         super().__init__()
+        self.W_query = nn.Linear(dim_in, dim_out, bias=qkv_bias)
+        self.W_key = nn.Linear(dim_in, dim_out, bias=qkv_bias)
+        self.W_value = nn.Linear(dim_in, dim_out, bias=qkv_bias)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Execute the model's forward pass."""
