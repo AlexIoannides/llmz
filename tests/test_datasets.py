@@ -1,4 +1,4 @@
-"""Test for tokenizers."""
+"""Test for datasets."""
 
 import pytest
 import tiktoken

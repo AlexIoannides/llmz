@@ -1,4 +1,4 @@
-"""Tokenizers for LLMs."""
+"""Datasets for LLMs."""
 
 import tiktoken
 import torch
