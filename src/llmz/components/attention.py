@@ -9,9 +9,9 @@ class MultiHeadAttention(nn.Module):
 
     def __init__(
             self,
+            context_size: int,
             dim_in: int,
             dim_out: int,
-            context_size: int,
             n_heads: int = 1,
             dropout: float = 0.6,
             qkv_bias: bool = False
