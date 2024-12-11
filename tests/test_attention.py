@@ -20,13 +20,12 @@ def test_Attention_output_size(batch_size: int, context_size: int, dim_out: int)
     assert out_batch.size() == torch.Size((batch_size, context_size, dim_in))
 
 
-def test_Attention_head_dim():
-    assert MultiHeadAttention(6, 6, dim_out=4, n_heads=1).dim_head == 4
-    assert MultiHeadAttention(6, 6, dim_out=4, n_heads=2).dim_head == 2
-
-    assert MultiHeadAttention(6, 6, dim_out=6, n_heads=1).dim_head == 6
-    assert MultiHeadAttention(6, 6, dim_out=6, n_heads=2).dim_head == 3
-    assert MultiHeadAttention(6, 6, dim_out=6, n_heads=3).dim_head == 2
+@pytest.mark.parametrize(
+        "dim_out, n_heads, result",
+        [(4, 1, 4), (4, 2, 2), (6, 1, 6), (6, 2, 3), (6, 3, 2)]
+)
+def test_Attention_head_dim(dim_out: int, n_heads: int, result: int):
+    assert MultiHeadAttention(6, 6, dim_out, n_heads).dim_head == result
 
 
 @pytest.mark.parametrize("dim_out", [7, 5, 2])
