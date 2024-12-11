@@ -19,15 +19,16 @@ class MultiHeadAttention(nn.Module):
         """Initialise model.
 
         Args:
-            dim_in: TODO
-            dim_out: TODO
-            context_size: TODO
-            n_heads: TODO. Defaults to 1.
-            dropout: TODO. Defaults to 0.6.
-            qkv_bias: TODO. Defaults to False.
+            dim_in: Dimension of input word embeddings.
+            dim_out: Dimension of output attention embeddings.
+            context_size: The number of input word embeddings in teh sequence.
+            n_heads: The number of attention heads. Defaults to 1.
+            dropout: The dropout rate. Defaults to 0.6.
+            qkv_bias: Whether or not to include bias in the linear layers used to
+                compute W_query, W_key and W_value. Defaults to False.
 
         Raises:
-            ModelConfigError: TODO
+            ModelConfigError: if dim_out % n_heads
 
         """
         super().__init__()
