@@ -7,12 +7,16 @@ from torch import nn
 class LayerNormalisation(nn.Module):
     """Layer normalisation.
 
-    Normalises batches of input tensor to zero mean and unit variance.
+    Normalises batches of input tensors close zero mean and unit variance. The module
+    allows for some trained deviation from the a mean of zero and a variance of one.
     """
 
-    def __init(self):
+    def __init__(self, dim_in: int):
         """Initialise module."""
         super().__init__()
+        self.epsilon = 1e-5
+        self.location = nn.Parameter(torch.zeros(dim_in))
+        self.scale = nn.Parameter(torch.ones(dim_in))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of module.
@@ -24,4 +28,7 @@ class LayerNormalisation(nn.Module):
             Tensor-by-tensor normalised version of the inputs.
 
         """
-        return x
+        x_mean = x.mean(dim=-1, keepdim=True)
+        x_stdev = x.std(dim=-1, keepdim=True, unbiased=False)  # unbiased as n -> inf
+        x_norm = (x - x_mean) / (x_stdev + self.epsilon)
+        return self.location + self.scale * x_norm
