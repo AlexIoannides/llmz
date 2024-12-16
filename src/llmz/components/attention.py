@@ -8,14 +8,14 @@ class MultiHeadAttention(nn.Module):
     """Basic attention block."""
 
     def __init__(
-            self,
-            context_size: int,
-            dim_in: int,
-            dim_out: int,
-            n_heads: int = 1,
-            dropout: float = 0.6,
-            qkv_bias: bool = False
-        ):
+        self,
+        context_size: int,
+        dim_in: int,
+        dim_out: int,
+        n_heads: int = 1,
+        dropout: float = 0.6,
+        qkv_bias: bool = False,
+    ):
         """Initialise model.
 
         Args:
@@ -44,13 +44,54 @@ class MultiHeadAttention(nn.Module):
         self.out_proj = nn.Linear(dim_out, dim_out)
         self.dropout = nn.Dropout(dropout)
 
-        self.register_buffer(
-            "mask", torch.triu(torch.ones(context_size, context_size), diagonal=1)
-        )
+        self.mask = torch.triu(torch.ones(context_size, context_size), diagonal=1)
+        # self.register_buffer("mask", self.mask)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Execute the model's forward pass."""
-        return x
+        """Execute the model's forward pass.
+
+        Args:
+            x: Batch of token embeddings.
+
+        Returns:
+            Batch of attention weighted embeddings.
+
+        """
+        batch_size, seq_len, dim_in = x.size()
+
+        # get mask for sequence length
+        mask_bool = self.mask.bool()[:seq_len, :seq_len]
+
+        # single head (dim = batch_size, n_heads, seq_len, dim_out)
+        queries = self.W_query(x)
+        keys = self.W_key(x)
+        values = self.W_value(x)
+
+        # split single head into multiple heads
+        queries = queries.view(batch_size, seq_len, self.n_heads, self.dim_head)
+        keys = keys.view(batch_size, seq_len, self.n_heads, self.dim_head)
+        values = values.view(batch_size, seq_len, self.n_heads, self.dim_head)
+
+        # reshape in size = batch_size, n_heads, seq_len, head_dim
+        queries = queries.transpose(1, 2)
+        keys = keys.transpose(1, 2)
+        values = values.transpose(1, 2)
+
+        # compute attention scores (matrix multiplication works on final two dimensions)
+        attn_scores = queries @ keys.transpose(2, 3)
+        attn_scores.masked_fill_(mask_bool, -torch.inf)
+
+        # compute attention weights from attention scores (dim = -1 -> last dim in size)
+        attn_weights = torch.softmax(attn_scores / keys.size()[-1] ** 0.5, dim=-1)
+        attn_weights = self.dropout(attn_scores)
+
+        # compute context embeddings & reshape to batch_size, seq_len, n_heads, head_dim
+        context_embeddings = (attn_weights @ values).transpose(1, 2)
+
+        # reshape to factor-out the multiple heads and take into account dim_out
+        context_embeddings = context_embeddings.view(batch_size, seq_len, self.dim_out)
+        context_embeddings = self.out_proj(context_embeddings)
+        return context_embeddings
 
 
 class ModelConfigError(Exception):
