@@ -16,7 +16,7 @@ class MultiHeadAttention(nn.Module):
         dropout: float = 0.6,
         qkv_bias: bool = False,
     ):
-        """Initialise model.
+        """Initialise module.
 
         Args:
             dim_in: Dimension of input word embeddings.
