@@ -43,9 +43,9 @@ class MultiHeadAttention(nn.Module):
         self.W_value = nn.Linear(dim_in, dim_out, bias=qkv_bias)
         self.out_proj = nn.Linear(dim_out, dim_out)
         self.dropout = nn.Dropout(dropout)
-
-        self.mask = torch.triu(torch.ones(context_size, context_size), diagonal=1)
-        # self.register_buffer("mask", self.mask)
+        self.register_buffer(
+            "mask", torch.triu(torch.ones(context_size, context_size), diagonal=1)
+        )  # these are not parameters
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Execute the model's forward pass.
