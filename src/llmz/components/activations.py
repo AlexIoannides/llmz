@@ -26,8 +26,8 @@ class GELU(nn.Module):
                 basis using the GELU activation function.
 
         """
-        tanh_exponent = torch.sqrt(
-            torch.tensor(2.0 / torch.pi) * (x + 0.044715 * torch.pow(x, 3))
+        tanh_exponent = torch.sqrt(torch.tensor(2.0 / torch.pi)) * (
+            x + 0.044715 * torch.pow(x, 3)
         )
         gelu_x = 0.5 * x * (1.0 + torch.tanh(tanh_exponent))
         return gelu_x
