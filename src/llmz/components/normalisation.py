@@ -12,7 +12,12 @@ class LayerNormalisation(nn.Module):
     """
 
     def __init__(self, dim_in: int):
-        """Initialise module."""
+        """Initialise module.
+
+        Args:
+            dim_in: Dimension of the input batches.
+
+        """
         super().__init__()
         self.epsilon = 1e-5
         self.location = nn.Parameter(torch.zeros(dim_in))
