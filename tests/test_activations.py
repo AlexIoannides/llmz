@@ -9,10 +9,11 @@ from llmz.components.activations import GELU
 @pytest.mark.parametrize(
     "x, result",
     [
-        (torch.tensor(5.0), torch.tensor(5.0)),
-        (torch.tensor(0.68), torch.tensor(0.51)),
         (torch.tensor(-5.0), torch.tensor(0.0)),
+        (torch.tensor(-1.0), torch.tensor(-0.16)),
         (torch.tensor(0.0), torch.tensor(0.0)),
+        (torch.tensor(0.68), torch.tensor(0.51)),
+        (torch.tensor(5.0), torch.tensor(5.0)),
         (torch.tensor([0.0, 0.0]), torch.tensor([0.0, 0.0])),
     ],
 )
