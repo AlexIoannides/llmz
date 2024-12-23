@@ -1,14 +1,16 @@
 """Test for normalisation modules."""
 
+import pytest
 import torch
 
 from llmz.components.normalisation import LayerNormalisation
 
 
-def test_LayerNormalisation():
+@pytest.mark.parametrize("location, scale", [(0.1, 0.025), (1.1, 0.25), (10.1, 2.5)])
+def test_LayerNormalisation(location: float, scale: float):
     torch.manual_seed(42)
     test_inputs_size = (3, 1000)
-    inputs = 1.1 + 0.25 * torch.randn(test_inputs_size)
+    inputs = location + scale * torch.randn(test_inputs_size)
 
     layer_norm = LayerNormalisation(dim_in=test_inputs_size[1])
     inputs_norm = layer_norm(inputs)
@@ -18,7 +20,12 @@ def test_LayerNormalisation():
 
     exp_mean_inputs_norm = torch.zeros((test_inputs_size[0], 1))
     exp_var_inputs_norm = torch.ones((test_inputs_size[0], 1))
-    tolerance = {"atol": 0.001, "rtol": 0.001}
 
-    torch.testing.assert_close(mean_inputs_norm, exp_mean_inputs_norm, **tolerance)
-    torch.testing.assert_close(var_inputs_norm, exp_var_inputs_norm, **tolerance)
+    tol = {"atol": 0.001, "rtol": 0.001}
+
+    torch.testing.assert_close(
+        mean_inputs_norm, exp_mean_inputs_norm, rtol=tol["rtol"], atol=tol["atol"]
+    )
+    torch.testing.assert_close(
+        var_inputs_norm, exp_var_inputs_norm, rtol=tol["rtol"], atol=tol["atol"]
+    )
