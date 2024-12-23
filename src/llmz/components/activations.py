@@ -8,7 +8,8 @@ class GELU(nn.Module):
     """Guassian Error Linear Unit (GELU).
 
     Implemented using an approximation to `x * F(x)`, where `F` is the cumulative
-    normal distribution function.
+    normal distribution function. See 'Build a LLM (from scratch)' by S. Raschka
+    (2024), p105.
     """
 
     def __init__(self):
