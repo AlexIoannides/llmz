@@ -8,14 +8,13 @@ from llmz.components.attention import MultiHeadAttention
 from llmz.components.normalisation import LayerNormalisation
 
 
-class TransformerBlock(nn.Module):
-    """Basic transformer block with multi-head attention."""
+class TransformerBlockGPT2(nn.Module):
+    """Basic transformer block with multi-head attention as used in GPT2."""
 
     def __init__(
         self,
         context_size: int,
         dim_in: int,
-        dim_out: int,
         n_heads: int = 1,
         dropout: float = 0.6,
         qkv_bias: bool = False,
@@ -24,7 +23,6 @@ class TransformerBlock(nn.Module):
 
         Args:
             dim_in: Dimension of input word embeddings.
-            dim_out: Dimension of output attention embeddings.
             context_size: The number of input word embeddings in teh sequence.
             n_heads: The number of attention heads. Defaults to 1.
             dropout: The dropout rate. Defaults to 0.6.
@@ -34,12 +32,12 @@ class TransformerBlock(nn.Module):
         """
         super().__init__()
         self.attention = MultiHeadAttention(
-            context_size, dim_in, dim_out, n_heads, dropout, qkv_bias
+            context_size, dim_in, dim_in, n_heads, dropout, qkv_bias
         )
-        self.linear_1 = nn.Linear(dim_out, dim_out * 2)
-        self.linear_2 = nn.Linear(dim_out * 2, dim_out)
-        self.normalise_1 = LayerNormalisation(dim_out)
-        self.normalise_2 = LayerNormalisation(dim_out)
+        self.linear_1 = nn.Linear(dim_in, dim_in * 2)
+        self.linear_2 = nn.Linear(dim_in * 2, dim_in)
+        self.normalise_1 = LayerNormalisation(dim_in)
+        self.normalise_2 = LayerNormalisation(dim_in)
         self.dropout = nn.Dropout(dropout)
         self.gelu = GELU()
 
