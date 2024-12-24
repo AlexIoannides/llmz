@@ -48,7 +48,7 @@ class MultiHeadAttention(nn.Module):
         )  # these are not parameters
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Execute the model's forward pass.
+        """Execute the module's forward pass.
 
         Args:
             x: Batch of token embeddings.

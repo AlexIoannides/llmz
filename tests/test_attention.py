@@ -1,4 +1,4 @@
-"""Tests for transformer."""
+"""Tests for attention modules."""
 
 import pytest
 import torch
@@ -7,10 +7,13 @@ from torch import nn
 from llmz.components.attention import ModelConfigError, MultiHeadAttention
 
 
-@pytest.mark.parametrize("batch_size, context_size, dim_out", [(1, 2, 5), (2, 4, 3)])
-def test_Attention_output_size(batch_size: int, context_size: int, dim_out: int):
-    dim_in = 9
-
+@pytest.mark.parametrize(
+    "batch_size, context_size, dim_in, dim_out",
+    [(1, 2, 9, 9), (1, 2, 9, 5), (2, 4, 9, 3)],
+)
+def test_Attention_output_size(
+    batch_size: int, context_size: int, dim_in: int, dim_out: int
+):
     tokens_batch = torch.ones(batch_size, context_size, dtype=torch.int32)
     embeddings_batch = nn.Embedding(10, dim_in)(tokens_batch)
 
