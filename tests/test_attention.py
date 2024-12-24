@@ -1,4 +1,4 @@
-"""Tests for transformer."""
+"""Tests for attention modules."""
 
 import pytest
 import torch
