@@ -4,3 +4,4 @@
 ::: llmz.components.attention
 ::: llmz.components.normalisation
 ::: llmz.components.activations
+::: llmz.components.transformers
