@@ -34,12 +34,7 @@ class TransformerBlock(nn.Module):
         """
         super().__init__()
         self.attention = MultiHeadAttention(
-            context_size,
-            dim_in,
-            dim_out,
-            n_heads,
-            dropout,
-            qkv_bias
+            context_size, dim_in, dim_out, n_heads, dropout, qkv_bias
         )
         self.linear_1 = nn.Linear(dim_out, dim_out * 2)
         self.linear_2 = nn.Linear(dim_out * 2, dim_out)
