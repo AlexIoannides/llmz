@@ -5,7 +5,7 @@ from torch import nn
 
 
 class MultiHeadAttention(nn.Module):
-    """Basic attention block."""
+    """Basic causal attention block."""
 
     def __init__(
         self,
@@ -21,7 +21,7 @@ class MultiHeadAttention(nn.Module):
         Args:
             dim_in: Dimension of input word embeddings.
             dim_out: Dimension of output attention embeddings.
-            context_size: The number of input word embeddings in teh sequence.
+            context_size: The number of input word embeddings in the sequence.
             n_heads: The number of attention heads. Defaults to 1.
             dropout: The dropout rate. Defaults to 0.6.
             qkv_bias: Whether or not to include bias in the linear layers used to
