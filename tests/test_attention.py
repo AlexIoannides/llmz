@@ -8,8 +8,8 @@ from llmz.components.attention import ModelConfigError, MultiHeadAttention
 
 
 @pytest.mark.parametrize(
-        "batch_size, context_size, dim_in, dim_out",
-        [(1, 2, 9, 9), (1, 2, 9, 5), (2, 4, 9, 3)]
+    "batch_size, context_size, dim_in, dim_out",
+    [(1, 2, 9, 9), (1, 2, 9, 5), (2, 4, 9, 3)],
 )
 def test_Attention_output_size(
     batch_size: int, context_size: int, dim_in: int, dim_out: int
