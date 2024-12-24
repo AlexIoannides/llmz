@@ -20,7 +20,9 @@ class LayerNormalisation(nn.Module):
         """
         super().__init__()
         self.epsilon = 1e-5
-        self.location = nn.Parameter(torch.zeros(dim_in))
+
+        # Trainable element-by-element adjustments to output tensors
+        self.shift = nn.Parameter(torch.zeros(dim_in))
         self.scale = nn.Parameter(torch.ones(dim_in))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -36,4 +38,5 @@ class LayerNormalisation(nn.Module):
         x_mean = x.mean(dim=-1, keepdim=True)
         x_stdev = x.std(dim=-1, keepdim=True, unbiased=False)  # unbiased as n -> inf
         x_norm = (x - x_mean) / (x_stdev + self.epsilon)
-        return self.location + self.scale * x_norm
+        breakpoint()
+        return self.shift + self.scale * x_norm
