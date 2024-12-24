@@ -38,5 +38,4 @@ class LayerNormalisation(nn.Module):
         x_mean = x.mean(dim=-1, keepdim=True)
         x_stdev = x.std(dim=-1, keepdim=True, unbiased=False)  # unbiased as n -> inf
         x_norm = (x - x_mean) / (x_stdev + self.epsilon)
-        breakpoint()
         return self.shift + self.scale * x_norm
