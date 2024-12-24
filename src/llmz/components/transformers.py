@@ -3,6 +3,10 @@
 import torch
 from torch import nn
 
+from llmz.components.activations import GELU
+from llmz.components.attention import MultiHeadAttention
+from llmz.components.normalisation import LayerNormalisation
+
 
 class TransformerBlock(nn.Module):
     """Basic transformer block with multi-head attention."""
@@ -29,6 +33,20 @@ class TransformerBlock(nn.Module):
 
         """
         super().__init__()
+        self.attention = MultiHeadAttention(
+            context_size,
+            dim_in,
+            dim_out,
+            n_heads,
+            dropout,
+            qkv_bias
+        )
+        self.linear_1 = nn.Linear(dim_out, dim_out * 2)
+        self.linear_2 = nn.Linear(dim_out * 2, dim_out)
+        self.normalise_1 = LayerNormalisation(dim_out)
+        self.normalise_2 = LayerNormalisation(dim_out)
+        self.dropout = nn.Dropout(dropout)
+        self.gelu = GELU()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Execute the module's forward pass.
@@ -40,4 +58,14 @@ class TransformerBlock(nn.Module):
             Batch of attention weighted embeddings.
 
         """
-        return x
+        y1 = self.normalise_1(x)
+        y1 = self.attention(y1)
+        y1 = self.dropout(y1)
+
+        y2 = self.normalise_2(y1 + x)
+        y2 = self.linear_1(y2)
+        y2 = self.gelu(y2)
+        y2 = self.linear_2(y2)
+        y2 = self.dropout(y2)
+
+        return y1 + y2
