@@ -23,7 +23,7 @@ class TransformerBlockGPT2(nn.Module):
 
         Args:
             dim_in: Dimension of input word embeddings.
-            context_size: The number of input word embeddings in teh sequence.
+            context_size: The number of input word embeddings in the sequence.
             n_heads: The number of attention heads. Defaults to 1.
             dropout: The dropout rate. Defaults to 0.6.
             qkv_bias: Whether or not to include bias in the linear layers used to
