@@ -36,8 +36,10 @@ class GPT2(nn.Module):
         """
         super().__init__()
 
+        self.context_size = context_size
         self.token_embed = nn.Embedding(vocab_size, embed_dim)
         self.position_embed = nn.Embedding(context_size, embed_dim)
+        self.dropout_embed = nn.Dropout(p=dropout)
 
         self.tsfmr_stack = nn.Sequential(
             *[
@@ -49,7 +51,7 @@ class GPT2(nn.Module):
         )
 
         self.final_norm = LayerNormalisation(embed_dim)
-        self.final_out = nn.Linear(embed_dim, vocab_size)
+        self.output_head = nn.Linear(embed_dim, vocab_size, bias=False)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Execute the module's forward pass.
@@ -61,4 +63,14 @@ class GPT2(nn.Module):
             Batch of attention weighted embeddings.
 
         """
-        return x
+        _, seq_len = x.size()
+        if seq_len > self.context_size:
+            raise Exception("TODO")
+
+        positions = torch.arange(0, seq_len, device=x.device)
+        y = self.token_embed(x) + self.position_embed(positions)
+        y = self.dropout_embed(y)
+        y = self.tsfmr_stack(y)
+        y = self.final_norm(y)
+        logits = self.output_head(y)
+        return logits
