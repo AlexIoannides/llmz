@@ -83,7 +83,7 @@ class MultiHeadAttention(nn.Module):
 
         # compute attention weights from attention scores (dim = -1 -> last dim in size)
         attn_weights = torch.softmax(attn_scores / keys.size()[-1] ** 0.5, dim=-1)
-        attn_weights = self.dropout(attn_scores)
+        attn_weights = self.dropout(attn_weights)
 
         # compute context embeddings & reshape to batch_size, seq_len, n_heads, head_dim
         context_embeddings = (attn_weights @ values).transpose(1, 2)
