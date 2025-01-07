@@ -1,9 +1,11 @@
 """Test for GP2 model."""
 
+import re
+
 import pytest
 import torch
 
-from llmz.gpt2 import GPT2
+from llmz.gpt2 import GPT2, GPT2InferenceError
 
 
 @pytest.mark.parametrize(
@@ -26,3 +28,11 @@ def test_TransformerBlock_output_properties(
 
     assert out_batch.size() == torch.Size((batch_size, context_size, vocab_size))
     assert torch.all(torch.isreal(out_batch))
+
+
+def test_TransformerBlock_raises_error_for_incomputable_inference():
+    model = GPT2(vocab_size=5, embed_dim=5, context_size=5, n_tsfmr_blocks=1)
+    expected_err_msg = re.escape("seq_len (6) > context_size (5)")
+    with pytest.raises(GPT2InferenceError, match=expected_err_msg):
+        x = torch.ones((1, 6))
+        model(x)

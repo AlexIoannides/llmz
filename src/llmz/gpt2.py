@@ -63,9 +63,10 @@ class GPT2(nn.Module):
             Batch of attention weighted embeddings.
 
         """
-        _, seq_len = x.size()
+        seq_len = x.size()[1]
         if seq_len > self.context_size:
-            raise Exception("TODO")
+            msg = f"seq_len ({seq_len}) > context_size ({self.context_size})"
+            raise GPT2InferenceError(msg)
 
         positions = torch.arange(0, seq_len, device=x.device)
         y = self.token_embed(x) + self.position_embed(positions)
@@ -74,3 +75,9 @@ class GPT2(nn.Module):
         y = self.final_norm(y)
         logits = self.output_head(y)
         return logits
+
+
+class GPT2InferenceError(Exception):
+    """Custom exception for GPT2 inference errors."""
+
+    pass
