@@ -5,7 +5,7 @@ import re
 import pytest
 import torch
 
-from llmz.gpt2 import GPT2, GPT2InferenceError
+from llmz.gpt2 import GPT2, GPT2Config, GPT2ConfigError, GPT2InferenceError
 
 
 @pytest.mark.parametrize(
@@ -36,3 +36,49 @@ def test_TransformerBlock_raises_error_for_incomputable_inference():
     with pytest.raises(GPT2InferenceError, match=expected_err_msg):
         x = torch.ones((1, 6))
         model(x)
+
+
+def test_GPT2Config_validates_fields():
+    # valid config
+    try:
+        GPT2Config(
+            vocab_size=1000,
+            embed_dim=800,
+            context_size=100,
+            n_tsfmr_blocks=4,
+            n_attn_heads=8,
+            dropout=0.2,
+            qkv_bias=False,
+        )
+        assert True
+    except Exception:
+        assert False
+
+    # invalid config
+    expected_msg = re.escape(
+        "invalid GPT2 parameters: vocab_size is not > 0\n embed_dim % n_attn_heads != 0"
+    )
+    with pytest.raises(GPT2ConfigError, match=expected_msg):
+        GPT2Config(
+            vocab_size=-1000,
+            embed_dim=801,
+            context_size=100,
+            n_tsfmr_blocks=4,
+            n_attn_heads=8,
+            dropout=0.2,
+            qkv_bias=False,
+        )
+
+def test_GPT2Config_kwarg_expansion():
+        try:
+            config = GPT2Config(
+                vocab_size=1000,
+                embed_dim=800,
+                context_size=100,
+                n_tsfmr_blocks=4,
+                n_attn_heads=8,
+            )
+            GPT2(**config)
+            assert True
+        except Exception:
+            assert False
