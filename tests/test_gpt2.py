@@ -69,16 +69,45 @@ def test_GPT2Config_validates_fields():
             qkv_bias=False,
         )
 
+
 def test_GPT2Config_kwarg_expansion():
-        try:
-            config = GPT2Config(
-                vocab_size=1000,
-                embed_dim=800,
-                context_size=100,
-                n_tsfmr_blocks=4,
-                n_attn_heads=8,
-            )
-            GPT2(**config)
-            assert True
-        except Exception:
-            assert False
+    try:
+        config = GPT2Config(
+            vocab_size=1000,
+            embed_dim=800,
+            context_size=100,
+            n_tsfmr_blocks=4,
+            n_attn_heads=8,
+        )
+        GPT2(**config)
+        assert True
+    except Exception:
+        assert False
+
+
+def test_GPT2Config_string_representation():
+    config = GPT2Config(
+        vocab_size=1000,
+        embed_dim=800,
+        context_size=100,
+        n_tsfmr_blocks=4,
+        n_attn_heads=8,
+    )
+    expected_output_pattern = (
+        r"GPT2Config\(([a-zA-Z0-9_]+=([\.\d]+|True|False|\".*\")(,\s|))+\)$"
+    )
+    assert re.match(expected_output_pattern, str(config)) is not None
+
+
+def test_GPT2Config_command_line_representation():
+    config = GPT2Config(
+        vocab_size=1000,
+        embed_dim=800,
+        context_size=100,
+        n_tsfmr_blocks=4,
+        n_attn_heads=8,
+    )
+    expected_output_pattern = (
+        r"^GPT2Config\(\n(\s\s[a-zA-Z0-9_]+=([\.\d]+|True|False|\".*\")+,\n)+\)$"
+    )
+    assert re.match(expected_output_pattern, config.__repr__()) is not None

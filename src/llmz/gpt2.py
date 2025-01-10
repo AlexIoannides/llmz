@@ -1,8 +1,7 @@
 """Implementation of GPT2."""
 
-from collections.abc import Iterator
+from collections.abc import KeysView
 from dataclasses import asdict, dataclass
-from typing import Any
 
 import torch
 from torch import nn
@@ -10,10 +9,20 @@ from torch import nn
 from llmz.components.normalisation import LayerNormalisation
 from llmz.components.transformers import TransformerBlockGPT2
 
+GPT2ConfigValue = int | float | bool
+
 
 @dataclass(frozen=True)
 class GPT2Config:
     """Container class for GPT2 model hyper-parameters.
+
+    This class will validate parameters and then allow GPT2 objects to be created using
+    keyword argument expansion - e.g,
+
+    ```python
+    config = GPT2Config(...)
+    model = GPT2(**config)
+    ```
 
     Args:
         vocab_size: The number of unique tokens that the model expects to encounter.
@@ -42,10 +51,10 @@ class GPT2Config:
 
     def __post_init__(self) -> None:
         """Validate fields after initialisation."""
-        errors: list[str] = [""]
+        errors: list[str] = []
 
         for field, value in self.__dict__.items():
-            if type(field) in (int, float) and float(field) <= 0.:
+            if type(value) in (int, float) and value <= 0:
                 errors.append(f"{field} is not > 0")
 
         if self.embed_dim % self.n_attn_heads != 0:
@@ -55,9 +64,38 @@ class GPT2Config:
             msg = "invalid GPT2 parameters: " + "\n ".join(errors)
             raise GPT2ConfigError(msg)
 
-    def __iter__(self) -> Iterator[tuple[str, Any]]:
-        """Iterate over fields to enable GPT2 instantiation with **kwargs syntax."""
-        return iter(asdict(self).items())
+    def keys(self) -> KeysView[str]:
+        """Get iterator of field keys.
+
+        Part of Mapping protocol required to enable keyword argument expansion using the
+        `**` operator.
+        """
+        return asdict(self).keys()
+
+    def __getitem__(self, key: str) -> GPT2ConfigValue:
+        """Get config value via its field name.
+
+        Part of Mapping protocol required to enable keyword argument expansion using the
+        `**` operator.
+        """
+        return asdict(self)[key]
+
+    def __str__(self) -> str:
+        """Format config as a string."""
+        str_repr = "GPT2Config("
+        for key, value in asdict(self).items():
+            str_repr += f"{key}={value}, "
+        str_repr = str_repr[: len(str_repr) - 2]  # remove final ', '
+        str_repr += ")"
+        return str_repr
+
+    def __repr__(self) -> str:
+        """Format config for the command line."""
+        cli_repr = "GPT2Config(\n"
+        for key, value in asdict(self).items():
+            cli_repr += f"  {key}={value},\n"
+        cli_repr += ")"
+        return cli_repr
 
 
 class GPT2(nn.Module):
