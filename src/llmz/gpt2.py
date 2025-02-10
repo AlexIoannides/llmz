@@ -3,11 +3,13 @@
 from collections.abc import KeysView
 from dataclasses import asdict, dataclass
 
+import tiktoken
 import torch
 from torch import nn
 
 from llmz.components.normalisation import LayerNormalisation
 from llmz.components.transformers import TransformerBlockGPT2
+from llmz.tokenizers import _Tokenizer
 
 GPT2ConfigValue = int | float | bool
 
@@ -166,6 +168,22 @@ class GPT2(nn.Module):
         y = self.final_norm(y)
         logits = self.output_head(y)
         return logits
+
+
+class GPT2Tokenizer(_Tokenizer):
+    """Pre-trained version of GPT2's tokenizer."""
+
+    def __init__(self) -> None:
+        """Initialise tokenizer."""
+        self._tokenizer = tiktoken.get_encoding("gpt2")
+
+    def text2tokens(self, text: str) -> list[int]:
+        """Map a string to a list of tokens."""
+        return self._tokenizer.encode(text)
+
+    def tokens2text(self, tokens: list[int]) -> str:
+        """Map a list of tokens to a string.."""
+        return self._tokenizer.decode(tokens)
 
 
 class GPT2ConfigError(Exception):

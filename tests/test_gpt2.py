@@ -5,7 +5,7 @@ import re
 import pytest
 import torch
 
-from llmz.gpt2 import GPT2, GPT2Config, GPT2ConfigError, GPT2InferenceError
+from llmz.gpt2 import GPT2, GPT2Config, GPT2ConfigError, GPT2InferenceError, GPT2Tokenizer
 
 
 @pytest.mark.parametrize(
@@ -111,3 +111,12 @@ def test_GPT2Config_command_line_representation():
         r"^GPT2Config\(\n(\s\s[a-zA-Z0-9_]+=([\.\d]+|True|False|\".*\")+,\n)+\)$"
     )
     assert re.match(expected_output_pattern, config.__repr__()) is not None
+
+
+@pytest.mark.parametrize("text", ["foo bar", "My name is Alex"])
+def test_GP2Tokenizer_tokenizes_text(text: str):
+    tokenizer = GPT2Tokenizer()
+    tokens = tokenizer.text2tokens(text)
+    assert len(tokens) > 1
+    assert isinstance(tokens[0], int)
+    assert tokenizer.tokens2text(tokens) == text

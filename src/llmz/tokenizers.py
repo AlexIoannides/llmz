@@ -16,9 +16,8 @@ class _Tokenizer(ABC):
     def __call__(self, text: str) -> list[int]:
         return self.text2tokens(text)
 
-    @abstractmethod
     def train(self, **kwargs: dict[str, Any]) -> _Tokenizer:
-        pass
+        return self
 
     @abstractmethod
     def text2tokens(self, text: str) -> list[int]:
