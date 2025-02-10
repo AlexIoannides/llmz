@@ -5,7 +5,13 @@ import re
 import pytest
 import torch
 
-from llmz.gpt2 import GPT2, GPT2Config, GPT2ConfigError, GPT2InferenceError, GPT2Tokenizer
+from llmz.gpt2 import (
+    GPT2,
+    GPT2Config,
+    GPT2ConfigError,
+    GPT2InferenceError,
+    GPT2Tokenizer,
+)
 
 
 @pytest.mark.parametrize(
@@ -117,6 +123,12 @@ def test_GPT2Config_command_line_representation():
 def test_GP2Tokenizer_tokenizes_text(text: str):
     tokenizer = GPT2Tokenizer()
     tokens = tokenizer.text2tokens(text)
+
     assert len(tokens) > 1
     assert isinstance(tokens[0], int)
+
+    assert tokenizer.text2tokens(text) == tokens
     assert tokenizer.tokens2text(tokens) == text
+
+    assert tokenizer(text) == tokenizer.text2tokens(text)
+    assert tokenizer.train() is tokenizer
