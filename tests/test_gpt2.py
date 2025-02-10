@@ -129,6 +129,4 @@ def test_GP2Tokenizer_tokenizes_text(text: str):
 
     assert tokenizer.text2tokens(text) == tokens
     assert tokenizer.tokens2text(tokens) == text
-
     assert tokenizer(text) == tokenizer.text2tokens(text)
-    assert tokenizer.train() is tokenizer

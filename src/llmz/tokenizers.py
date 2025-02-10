@@ -7,7 +7,6 @@ but they will all implement the interface defined here.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
 
 
 class _Tokenizer(ABC):
@@ -15,9 +14,6 @@ class _Tokenizer(ABC):
 
     def __call__(self, text: str) -> list[int]:
         return self.text2tokens(text)
-
-    def train(self, **kwargs: dict[str, Any]) -> _Tokenizer:
-        return self
 
     @abstractmethod
     def text2tokens(self, text: str) -> list[int]:
