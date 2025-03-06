@@ -4,7 +4,7 @@
 import pytest
 import torch
 
-from llmz.generate import _sample_decoding
+from llmz.generate import _sample_decoding, _top_k_decoding
 
 
 @pytest.mark.parametrize(
@@ -20,8 +20,8 @@ def test_sample_decoding(
 ):
     torch.manual_seed(42)
     n_samples = 1000
-    token_samples = torch.tensor(
-        [_sample_decoding(logits, temperature) for _ in range(n_samples)]
+    token1_sampled = torch.tensor(
+        [_sample_decoding(logits, temperature) == 1 for _ in range(n_samples)]
     )
-    token1_pct = token_samples.sum() / n_samples
+    token1_pct = token1_sampled.sum() / n_samples
     assert float(token1_pct) == pytest.approx(token1_expected_pct, rel=0.05)
