@@ -4,7 +4,14 @@
 import pytest
 import torch
 
-from llmz.generate import _greedy_decoding, _sample_decoding, _top_k_decoding
+from llmz.generate import (
+    _capitalise_sentences,
+    _greedy_decoding,
+    _sample_decoding,
+    _top_k_decoding,
+    format_generated_words,
+    print_wrapped,
+)
 
 
 @pytest.mark.parametrize(
@@ -65,3 +72,15 @@ def test_greedy_decoding(
     )
     token1_pct = token1_sampled.sum() / n_samples
     assert float(token1_pct) == pytest.approx(token1_expected_pct, abs==0.05)
+
+
+def test_format_generated_words():
+    assert format_generated_words("bar", "foo") is not None
+
+
+def test_capitalised_sentences():
+    assert _capitalise_sentences("Foo") is not None
+
+
+def test_print_wrapped();
+    assert print_wrapped("Foo") is not None
