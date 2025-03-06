@@ -87,10 +87,8 @@ def _greedy_decoding(logits: torch.Tensor, temperature: float = 1.0) -> torch.Te
 
 def format_generated_words(text: str, prompt: str) -> str:
     """Format list of words into a readable paragraph."""
-    text = re.sub(r" i ", " I ", text)
     text = _capitalise_sentences(text, sentence_delimiter=". ")
-    text = text if text[0] == "I" else text[:1].lower() + text[1:]
-    text = "==> " + prompt.upper().strip() + " " + text.strip() + "..."
+    text = "==> " + prompt.upper().strip() + " " + text.strip()
     return "\n".join([line for line in wrap(text, width=89)])
 
 

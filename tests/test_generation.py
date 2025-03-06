@@ -3,6 +3,7 @@
 
 import pytest
 import torch
+from _pytest.capture import CaptureFixture
 
 from llmz.generate import (
     _capitalise_sentences,
@@ -31,7 +32,7 @@ def test_sample_decoding(
         [_sample_decoding(logits, temperature) == 1 for _ in range(n_samples)]
     )
     token1_pct = token1_sampled.sum() / n_samples
-    assert float(token1_pct) == pytest.approx(token1_expected_pct, abs==0.05)
+    assert float(token1_pct) == pytest.approx(token1_expected_pct, abs=0.05)
 
 
 @pytest.mark.parametrize(
@@ -71,16 +72,21 @@ def test_greedy_decoding(
         [_greedy_decoding(logits, temperature) == 1 for _ in range(n_samples)]
     )
     token1_pct = token1_sampled.sum() / n_samples
-    assert float(token1_pct) == pytest.approx(token1_expected_pct, abs==0.05)
-
-
-def test_format_generated_words():
-    assert format_generated_words("bar", "foo") is not None
+    assert float(token1_pct) == pytest.approx(token1_expected_pct, abs==.05)
 
 
 def test_capitalised_sentences():
-    assert _capitalise_sentences("Foo") is not None
+    assert _capitalise_sentences("foo is bar. bar is foo.") == "Foo is bar. Bar is foo."
 
 
-def test_print_wrapped();
-    assert print_wrapped("Foo") is not None
+def test_format_generated_words():
+    assert format_generated_words("bar!", "foo?") == "==> FOO? Bar!"
+
+
+def test_print_wrapped(capsys: CaptureFixture[str]):
+    text = "foo" * 89
+    print_wrapped(text)
+    stdout = capsys.readouterr().out
+    stdout_lines = stdout.splitlines()
+    assert len(stdout_lines[0]) == 89
+    assert len(stdout_lines[1]) == 89
