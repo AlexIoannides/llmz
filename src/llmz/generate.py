@@ -33,7 +33,7 @@ def generate(
         x = torch.tensor([token_sequence], device=device)
         token_logits = model(x)
         token_pred = decode(token_logits[0, -1], strategy, temperature, k=k)
-        token_sequence += [token_pred.item()]
+        token_sequence += [token_pred]
 
     new_token_sequence = token_sequence[len(prompt_tokens) :]
     new_token_sequence = token_sequence[len(prompt_tokens) :]
@@ -46,7 +46,7 @@ def decode(
     temperature: float = 1.0,
     *,
     k: int = 5,
-) -> torch.Tensor:
+) -> int:
     """Decode generative model output using the specified strategy."""
     match strategy:
         case "greedy":
@@ -57,31 +57,36 @@ def decode(
             return _sample_decoding(token_logits, temperature)
 
 
-def _sample_decoding(logits: torch.Tensor, temperature: float = 1.0) -> torch.Tensor:
+def _sample_decoding(logits: torch.Tensor, temperature: float = 1.0) -> int:
     """Generate next token using sample decoding strategy."""
-    return torch.distributions.Categorical(
-        logits=logits.squeeze() / temperature
-    ).sample()
+    sampled_token = (
+        torch.distributions.Categorical(logits=logits.squeeze() / temperature)
+        .sample()
+        .item()
+    )
+    return int(sampled_token)
 
 
-def _top_k_decoding(
-    logits: torch.Tensor, temperature: float = 1.0, k: int = 3
-) -> torch.Tensor:
+def _top_k_decoding(logits: torch.Tensor, temperature: float = 1.0, k: int = 3) -> int:
     """Generate next token using top-k decoding strategy."""
     token_probs = torch.distributions.Categorical(
         logits=logits.squeeze() / temperature
     ).probs
     top_k_tokens = torch.topk(token_probs, k=k)
-    sampled_token = torch.distributions.Categorical(probs=top_k_tokens.values).sample()
-    return top_k_tokens.indices[sampled_token]
+    sampled_token_idx = torch.distributions.Categorical(
+        probs=top_k_tokens.values
+    ).sample()
+    sampled_token = top_k_tokens.indices[sampled_token_idx].item()
+    return int(sampled_token)
 
 
-def _greedy_decoding(logits: torch.Tensor, temperature: float = 1.0) -> torch.Tensor:
+def _greedy_decoding(logits: torch.Tensor, temperature: float = 1.0) -> int:
     """Generate next token using greedy decoding strategy."""
     token_probs = torch.distributions.Categorical(
         logits=logits.squeeze() / temperature
     ).probs
-    return torch.argmax(token_probs)
+    sampled_token = torch.argmax(token_probs).item()
+    return int(sampled_token)
 
 
 def format_generated_words(text: str, prompt: str) -> str:
