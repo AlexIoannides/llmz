@@ -1,7 +1,7 @@
 # API Reference
 
 ::: llmz.datasets
-::: llmz.generation
+::: llmz.generate
 ::: llmz.gpt2
 ::: llmz.components.attention
 ::: llmz.components.normalisation
