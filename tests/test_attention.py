@@ -11,7 +11,7 @@ from llmz.components.attention import ModelConfigError, MultiHeadAttention
     "batch_size, context_size, dim_in, dim_out",
     [(1, 2, 9, 9), (1, 2, 9, 5), (2, 4, 9, 3)],
 )
-def test_Attention_output_size(
+def test_Attention_output_properties(
     batch_size: int, context_size: int, dim_in: int, dim_out: int
 ):
     tokens_batch = torch.ones(batch_size, context_size, dtype=torch.int32)
@@ -21,6 +21,7 @@ def test_Attention_output_size(
     out_batch = attention(embeddings_batch)
 
     assert out_batch.size() == torch.Size((batch_size, context_size, dim_out))
+    assert torch.all(torch.isreal(out_batch))
 
 
 @pytest.mark.parametrize(
