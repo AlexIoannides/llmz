@@ -1,6 +1,5 @@
 """Tools for text generation ."""
 
-import re
 from textwrap import wrap
 from typing import Literal
 
