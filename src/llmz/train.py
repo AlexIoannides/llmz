@@ -3,10 +3,55 @@
 from torch import nn
 
 
-class CosineAnnealingLRSchedule:
+class CosineAnnealingWithWarmupLRSchedule:
     """LR schedule using cosine annealing with linear warmup."""
 
-    pass
+    def __init__(
+            self, num_steps: int, warmup_steps: int, initial_lr: float, peak_lr: float
+        ):
+        """Initialise.
+
+        Args:
+            num_steps: The total number of steps for the schedule.
+            warmup_steps: Number of steps in the linear warmup phase.
+            initial_lr: Learning rate at first step.
+            peak_lr: Peak learning rate at end of warmup phase.
+
+        """
+        value_errors: list[str] = []
+        if num_steps <= 0:
+            value_errors.append("num_steps <= 0")
+        if warmup_steps < num_steps:
+            value_errors.append("warmup_steps < num_steps")
+        if initial_lr <= 0.0:
+            value_errors.append("initial_lr <= 0.0")
+        if peak_lr < initial_lr:
+            value_errors.append("peak_lr < initial_lr")
+
+        if value_errors:
+            e = ValueError("Invalid arguments for LR schedule")
+            for error in value_errors:
+                e.add_note(error)
+            raise e
+
+        self.num_steps = num_steps
+        self.warmup_steps = warmup_steps
+        self.initial_lr = initial_lr
+        self.peak_lr = peak_lr
+        self.lr_increment = (peak_lr - initial_lr) / warmup_steps
+
+    def __call__(self, step: int) -> float:
+        """Get learning rate for given step.
+
+        Args:
+            step: The global training step.
+
+        Returns:
+            The learning rate for the global training step.
+
+        """
+        return 0.0
+
 
 
 def train(model: nn.Module) -> None:
