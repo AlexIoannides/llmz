@@ -20,13 +20,13 @@ class CosineAnnealingWithWarmupLRSchedule:
         """
         value_errors: list[str] = []
         if num_steps <= 0:
-            value_errors.append("num_steps <= 0")
+            value_errors.append(" num_steps <= 0")
         if warmup_steps < num_steps:
-            value_errors.append("warmup_steps < num_steps")
+            value_errors.append(" warmup_steps < num_steps")
         if initial_lr <= 0.0:
-            value_errors.append("initial_lr <= 0.0")
+            value_errors.append(" initial_lr <= 0.0")
         if peak_lr < initial_lr:
-            value_errors.append("peak_lr < initial_lr")
+            value_errors.append(" peak_lr < initial_lr")
 
         if value_errors:
             e = ValueError("Invalid arguments for LR schedule")
