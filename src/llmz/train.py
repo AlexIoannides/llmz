@@ -1,8 +1,12 @@
 """Functions for training LLMs."""
 
 import math
+from collections.abc import Callable
 
+import torch
 from torch import nn
+from torch.optim import Optimizer
+from torch.utils.data import DataLoader
 
 
 class LinearWarmupCosineAnnealingLRSchedule:
@@ -52,6 +56,9 @@ class LinearWarmupCosineAnnealingLRSchedule:
         Returns:
             The learning rate for the global training step.
 
+        Raises:
+            ValueError: If step < 0.
+
         """
         if step < 0:
             raise ValueError(f"{step=}, must be > 0")
@@ -68,11 +75,23 @@ class LinearWarmupCosineAnnealingLRSchedule:
 
 
 
-def train(model: nn.Module) -> None:
-    """Train model.
+def train(
+        model: nn.Module,
+        optimizer: Optimizer,
+        train_dataloader: DataLoader,
+        val_dataloader: DataLoader,
+        epochs: int,
+        lr_schedule: Callable[[int], float],
+    ) -> None:
+    """Trains model.
 
     Args:
-        model: The model to train!
+        model: The PyTorch model to train.
+        optimizer: The optimizer for updating model parameters.
+        train_dataloader: DataLoader for training data.
+        val_dataloader: DataLoader for validation data.
+        epochs: Number of training epochs.
+        lr_schedule: Function to compute learning rate for training step.
 
     """
     pass
