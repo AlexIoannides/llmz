@@ -2,6 +2,7 @@
 
 import math
 from collections.abc import Callable
+from typing import NamedTuple
 
 import torch
 from torch import nn
@@ -74,14 +75,51 @@ class LinearWarmupCosineAnnealingLRSchedule:
         return lr
 
 
+class Evaluator:
+    """Model evaluator.
+
+    This class executes all model evaluations and stores the results.
+    """
+
+    def __init__(self, train_dataloader: DataLoader, val_dataloader: DataLoader):
+        """Initialise.
+
+        Args:
+            train_dataloader: DataLoader for training data.
+            val_dataloader: DataLoader for validation data.
+
+        """
+        self._eval_records: list[dict[str, float | int | str | bool]] = []
+
+    def __call__(self, step: int, model: nn.Module) -> None:
+        """Evaluate model.
+
+        Args:
+            step: The number of training steps applied to the model.
+            model: The model to evaluate.
+
+        """
+        pass
+
+    @staticmethod
+    def _compute_metrics(model: nn.Module, dataloader: DataLoader) -> dict[str, float]:
+        """Compute all metrics for a dataloader."""
+        return {"A": 1.0}
+
+    @staticmethod
+    def _compute_scenarios(model: nn.Module) -> dict[str, float | int | str | bool]:
+        """Compute predictions for specific scenarios."""
+        return {"A": 1.0}
+
 
 def train(
         model: nn.Module,
         optimizer: Optimizer,
         train_dataloader: DataLoader,
-        val_dataloader: DataLoader,
-        epochs: int,
+        train_epochs: int,
+        eval_freq_steps: int,
         lr_schedule: Callable[[int], float],
+        evaluator: Evaluator,
     ) -> None:
     """Trains model.
 
@@ -89,8 +127,9 @@ def train(
         model: The PyTorch model to train.
         optimizer: The optimizer for updating model parameters.
         train_dataloader: DataLoader for training data.
+        train_epochs: Number of training epochs.
         val_dataloader: DataLoader for validation data.
-        epochs: Number of training epochs.
+        val_freq_steps: Number of steps between validations.
         lr_schedule: Function to compute learning rate for training step.
 
     """
