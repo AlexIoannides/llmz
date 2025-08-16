@@ -33,13 +33,15 @@ def test_LinearWarmupCosineAnnealingLRSchedule():
     # At step 0, should be initial_lr
     assert lr_schedule(0) == 0.001
     # At warmup_steps, should be peak_lr
-    assert lr_schedule(30) == 0.01
+    assert lr_schedule(30) == pytest.approx(0.01, rel=1e-6)
     # At last step, should be initial_lr again (cosine annealing)
-    assert lr_schedule(100) == pytest.approx(0.0, rel=1e-6)
+    assert lr_schedule(100) == pytest.approx(0.001, rel=1e-6)
+    # Beyond last step, should remain ar initial_lr
+    assert lr_schedule(200) == 0.001
 
-    pattern = "step=101 not in the range [0, {self.num_steps}]"
+    pattern = "step=-1, must be > 0"
     with pytest.raises(ValueError, match=pattern):
-        lr_schedule(101)
+        lr_schedule(-1)
 
 
 def test_train():

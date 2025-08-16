@@ -40,8 +40,8 @@ class LinearWarmupCosineAnnealingLRSchedule:
         self.warmup_steps = warmup_steps
         self.cosine_steps = num_steps - warmup_steps
         self.initial_lr = initial_lr
-        self.peak_lr = peak_lr
-        self.lr_increment = (peak_lr - initial_lr) / warmup_steps
+        self.lr_cosine_delta = peak_lr - initial_lr
+        self.lr_warmup_delta = (peak_lr - initial_lr) / warmup_steps
 
     def __call__(self, step: int) -> float:
         """Get learning rate for given step.
@@ -53,13 +53,16 @@ class LinearWarmupCosineAnnealingLRSchedule:
             The learning rate for the global training step.
 
         """
-        if step >= 0 and step < self.warmup_steps:
-            lr = self.initial_lr + step * self.lr_increment
+        if step < 0:
+            raise ValueError(f"{step=}, must be > 0")
+        elif step >= 0 and step < self.warmup_steps:
+            lr = self.initial_lr + step * self.lr_warmup_delta
         elif step >= self.warmup_steps and step <= self.num_steps:
             step_cosine = step - self.warmup_steps
-            lr = self.peak_lr * math.cos(math.pi * step_cosine / self.cosine_steps)
+            x = math.pi * step_cosine / self.cosine_steps
+            lr = self.initial_lr + self.lr_cosine_delta * 0.5 * (1.0 + math.cos(x))
         else:
-            raise ValueError(f"{step=} not in the range [0, {self.num_steps}]")
+            lr = self.initial_lr
 
         return lr
 
