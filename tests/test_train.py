@@ -2,6 +2,7 @@
 
 import torch
 import pytest
+from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 from llmz.gpt2 import GPT2
@@ -28,6 +29,11 @@ class TestData(Dataset):
 
     def __len__(self) -> int:
         return self.n_obs
+
+class TestModel(nn.Module):
+    """Simple model to use for testing."""
+
+    pass
 
 
 @pytest.fixture

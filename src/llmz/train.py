@@ -1,8 +1,9 @@
 """Functions for training LLMs."""
 
+import logging
 import math
 from collections.abc import Callable
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 import torch
 from torch import nn
@@ -75,10 +76,17 @@ class LinearWarmupCosineAnnealingLRSchedule:
         return lr
 
 
+class EvalResult(NamedTuple):
+    """Container for evaluation results produced during training."""
+
+    step: int
+    results: dict[str, float | int | str]
+
+
 class Evaluator:
     """Model evaluator.
 
-    This class executes all model evaluations and stores the results.
+    This class executes and stores all model evaluations during training.
     """
 
     def __init__(self, train_dataloader: DataLoader, val_dataloader: DataLoader):
@@ -89,14 +97,20 @@ class Evaluator:
             val_dataloader: DataLoader for validation data.
 
         """
-        self._eval_records: list[dict[str, float | int | str | bool]] = []
+        self.train_dl = train_dataloader
+        self.val_dl = val_dataloader
+        self._eval_records: list[EvalResult]
 
-    def __call__(self, step: int, model: nn.Module) -> None:
+    def evaluate(self, step: int, model: nn.Module, log: logging.Logger | None) -> None:
         """Evaluate model.
 
         Args:
             step: The number of training steps applied to the model.
             model: The model to evaluate.
+            log: Optional logger for logging results? Defaults to None.
+
+        Return:
+            All evaluations for the model after training steps.
 
         """
         pass
@@ -107,8 +121,10 @@ class Evaluator:
         return {"A": 1.0}
 
     @staticmethod
-    def _compute_scenarios(model: nn.Module) -> dict[str, float | int | str | bool]:
-        """Compute predictions for specific scenarios."""
+    def _compute_scenarios(
+        model: nn.Module, scenarios: Any
+    ) -> dict[str, float | int | str]:
+        """Compute model output for specific input scenarios."""
         return {"A": 1.0}
 
 
