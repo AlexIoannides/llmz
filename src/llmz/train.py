@@ -1,9 +1,11 @@
 """Functions for training LLMs."""
 
+import math
+
 from torch import nn
 
 
-class CosineAnnealingWithWarmupLRSchedule:
+class LinearWarmupCosineAnnealingLRSchedule:
     """LR schedule using cosine annealing with linear warmup."""
 
     def __init__(
@@ -21,8 +23,8 @@ class CosineAnnealingWithWarmupLRSchedule:
         value_errors: list[str] = []
         if num_steps <= 0:
             value_errors.append(" num_steps <= 0")
-        if warmup_steps < num_steps:
-            value_errors.append(" warmup_steps < num_steps")
+        if warmup_steps > num_steps:
+            value_errors.append(" warmup_steps > num_steps")
         if initial_lr <= 0.0:
             value_errors.append(" initial_lr <= 0.0")
         if peak_lr < initial_lr:
@@ -36,6 +38,7 @@ class CosineAnnealingWithWarmupLRSchedule:
 
         self.num_steps = num_steps
         self.warmup_steps = warmup_steps
+        self.cosine_steps = num_steps - warmup_steps
         self.initial_lr = initial_lr
         self.peak_lr = peak_lr
         self.lr_increment = (peak_lr - initial_lr) / warmup_steps
@@ -50,7 +53,15 @@ class CosineAnnealingWithWarmupLRSchedule:
             The learning rate for the global training step.
 
         """
-        return 0.0
+        if step >= 0 and step < self.warmup_steps:
+            lr = self.initial_lr + step * self.lr_increment
+        elif step >= self.warmup_steps and step <= self.num_steps:
+            step_cosine = step - self.warmup_steps
+            lr = self.peak_lr * math.cos(math.pi * step_cosine / self.cosine_steps)
+        else:
+            raise ValueError(f"{step=} not in the range [0, {self.num_steps}]")
+
+        return lr
 
 
 
