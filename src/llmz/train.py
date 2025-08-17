@@ -6,8 +6,7 @@ from collections.abc import Callable
 from typing import Any, NamedTuple
 
 import torch
-from torch import nn
-from torch.optim import Optimizer
+from torch import nn, optim
 from torch.utils.data import DataLoader
 
 
@@ -128,7 +127,8 @@ class Evaluator:
 
 def train(
         model: nn.Module,
-        optimizer: Optimizer,
+        loss_calc: Callable[[nn.Module, torch.Tensor, torch.Tensor], torch.Tensor],
+        optimizer: optim.Optimizer,
         lr_schedule: Callable[[int], float],
         train_dataloader: DataLoader,
         train_epochs: int,
@@ -139,6 +139,7 @@ def train(
 
     Args:
         model: The PyTorch model to train.
+        loss_calc: Function that calculates and returns loss for model and batch.
         optimizer: The optimizer for updating model parameters.
         lr_schedule: Function to compute learning rate for training step.
         train_dataloader: DataLoader for training data.

@@ -112,5 +112,10 @@ def test_evaluator_computes_evaluations(model: nn.Module, dataloader: DataLoader
     assert eval is not None
 
 
-def test_train():
+def test_train_runs_all_steps_end_to_end():
+    # calls loss_calc
+    # calls evaluator
+    # calls lr_schedule
+    # calls clip_grads
+    # updates model weights
     pass
