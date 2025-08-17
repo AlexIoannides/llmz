@@ -2,12 +2,16 @@
 
 import logging
 import math
+import sys
 from collections.abc import Callable
 from typing import Any, NamedTuple
 
 import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
+
+logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+log = logging.getLogger("llmz.train")
 
 
 class LinearWarmupCosineAnnealingLRSchedule:
@@ -100,13 +104,15 @@ class Evaluator:
         self.val_dl = val_dataloader
         self._eval_records: list[EvalResult]
 
-    def evaluate(self, step: int, model: nn.Module, log: logging.Logger | None) -> None:
+    def evaluate(
+            self, step: int, model: nn.Module, log: logging.Logger | None = log
+        ) -> None:
         """Evaluate model.
 
         Args:
             step: The number of training steps applied to the model.
             model: The model to evaluate.
-            log: Optional logger for logging results? Defaults to None.
+            log: Optional logger for logging results? Defaults to custom llmz logger.
 
         Return:
             All evaluations for the model after training steps.
@@ -128,107 +134,55 @@ class Evaluator:
 def train(
         model: nn.Module,
         loss_calc: Callable[[nn.Module, torch.Tensor, torch.Tensor], torch.Tensor],
-        optimizer: optim.Optimizer,
-        lr_schedule: Callable[[int], float],
+        optimiser: optim.Optimizer,
+        lr_schedule: Callable[[int], float] | optim.lr_scheduler.LRScheduler,
         train_dataloader: DataLoader,
         train_epochs: int,
         eval_freq_steps: int,
         evaluator: Evaluator,
+        log_freq_steps: int = 100,
+        clip_gradients_norm: float | None = None
     ) -> None:
     """Trains model.
 
     Args:
         model: The PyTorch model to train.
         loss_calc: Function that calculates and returns loss for model and batch.
-        optimizer: The optimizer for updating model parameters.
+        optimiser: The optimizer for updating model parameters.
         lr_schedule: Function to compute learning rate for training step.
         train_dataloader: DataLoader for training data.
         train_epochs: Number of training epochs.
         eval_freq_steps: Number of steps between evaluations.
         evaluator: A handler for all model evaluations.
+        log_freq_steps: Number of steps between basic progress logging to stdout.
+            Defaults to 100.
+        clip_gradients_norm: Optional norm for gradient vectors to use for clipping.
+            Defaults to None.
 
     """
-    pass
+    if not isinstance(lr_schedule, optim.lr_scheduler.LRScheduler):
+        lr_schedule = optim.lr_scheduler.LambdaLR(optimiser, lr_schedule)
 
+    step = 0
+    for epoch in range(train_epochs):
+        for X_batch, y_batch in train_dataloader:
+            step += 1
+            model.train()
+            optimiser.zero_grad()
 
-# from previous_chapters import evaluate_model, generate_and_print_sample
-# # Alternatively:
-# # from llms_from_scratch.ch05 import evaluate_model, generate_and_print_samplee
+            loss = loss_calc(model, X_batch, y_batch)
+            loss.backward()
 
+            if clip_gradients_norm:
+                nn.utils.clip_grad_norm_(
+                    model.parameters(), max_norm=clip_gradients_norm
+                )
 
-# ORIG_BOOK_VERSION = False
+            optimiser.step()
+            lr_schedule.step()
 
+            if step % log_freq_steps:
+                log.info(f"{step=}, {epoch=}")
 
-# def train_model(model, train_loader, val_loader, optimizer, device,
-#                 n_epochs, eval_freq, eval_iter, start_context, tokenizer,
-#                 warmup_steps, initial_lr=3e-05, min_lr=1e-6):
-
-#     train_losses, val_losses, track_tokens_seen, track_lrs = [], [], [], []
-#     tokens_seen, global_step = 0, -1
-
-#     # Retrieve the maximum learning rate from the optimizer
-#     peak_lr = optimizer.param_groups[0]["lr"]
-
-#     # Calculate the total number of iterations in the training process
-#     total_training_steps = len(train_loader) * n_epochs
-
-#     # Calculate the learning rate increment during the warmup phase
-#     lr_increment = (peak_lr - initial_lr) / warmup_steps
-
-#     for epoch in range(n_epochs):
-#         model.train()
-#         for input_batch, target_batch in train_loader:
-#             optimizer.zero_grad()
-#             global_step += 1
-
-#             # Adjust the learning rate based on the current phase (warmup or cosine annealing)
-#             if global_step < warmup_steps:
-#                 # Linear warmup
-#                 lr = initial_lr + global_step * lr_increment  
-#             else:
-#                 # Cosine annealing after warmup
-#                 progress = ((global_step - warmup_steps) / 
-#                             (total_training_steps - warmup_steps))
-#                 lr = min_lr + (peak_lr - min_lr) * 0.5 * (1 + math.cos(math.pi * progress))
-
-#             # Apply the calculated learning rate to the optimizer
-#             for param_group in optimizer.param_groups:
-#                 param_group["lr"] = lr
-#             track_lrs.append(lr)  # Store the current learning rate
-
-#             # Calculate and backpropagate the loss
-#             loss = calc_loss_batch(input_batch, target_batch, model, device)
-#             loss.backward()
-
-#             # Apply gradient clipping after the warmup phase to avoid exploding gradients
-#             if ORIG_BOOK_VERSION:
-#                 if global_step > warmup_steps:
-#                     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  
-#             else:
-#                 if global_step >= warmup_steps:  # the book originally used global_step > warmup_steps, which led to a skipped clipping step after warmup
-#                     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                
-#             optimizer.step()
-#             tokens_seen += input_batch.numel()
-
-#             # Periodically evaluate the model on the training and validation sets
-#             if global_step % eval_freq == 0:
-#                 train_loss, val_loss = evaluate_model(
-#                     model, train_loader, val_loader,
-#                     device, eval_iter
-#                 )
-#                 train_losses.append(train_loss)
-#                 val_losses.append(val_loss)
-#                 track_tokens_seen.append(tokens_seen)
-#                 # Print the current losses
-#                 print(f"Ep {epoch+1} (Iter {global_step:06d}): "
-#                       f"Train loss {train_loss:.3f}, "
-#                       f"Val loss {val_loss:.3f}"
-#                 )
-
-#         # Generate and print a sample from the model to monitor progress
-#         generate_and_print_sample(
-#             model, tokenizer, device, start_context
-#         )
-
-#     return train_losses, val_losses, track_tokens_seen, track_lrs
+            if step % eval_freq_steps == 0:
+                evaluator.evaluate(step, model)

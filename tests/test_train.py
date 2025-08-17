@@ -119,3 +119,7 @@ def test_train_runs_all_steps_end_to_end():
     # calls clip_grads
     # updates model weights
     pass
+
+
+def test_train_runs_logs_to_stdout():
+    pass
