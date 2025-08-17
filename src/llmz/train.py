@@ -121,9 +121,7 @@ class Evaluator:
         return {"A": 1.0}
 
     @staticmethod
-    def _compute_scenarios(
-        model: nn.Module, scenarios: Any
-    ) -> dict[str, float | int | str]:
+    def _compute_scenarios(model: nn.Module) -> dict[str, float | int | str]:
         """Compute model output for specific input scenarios."""
         return {"A": 1.0}
 
@@ -131,10 +129,10 @@ class Evaluator:
 def train(
         model: nn.Module,
         optimizer: Optimizer,
+        lr_schedule: Callable[[int], float],
         train_dataloader: DataLoader,
         train_epochs: int,
         eval_freq_steps: int,
-        lr_schedule: Callable[[int], float],
         evaluator: Evaluator,
     ) -> None:
     """Trains model.
@@ -142,11 +140,11 @@ def train(
     Args:
         model: The PyTorch model to train.
         optimizer: The optimizer for updating model parameters.
+        lr_schedule: Function to compute learning rate for training step.
         train_dataloader: DataLoader for training data.
         train_epochs: Number of training epochs.
-        val_dataloader: DataLoader for validation data.
-        val_freq_steps: Number of steps between validations.
-        lr_schedule: Function to compute learning rate for training step.
+        eval_freq_steps: Number of steps between evaluations.
+        evaluator: A handler for all model evaluations.
 
     """
     pass
