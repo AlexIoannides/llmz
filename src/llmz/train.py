@@ -131,6 +131,8 @@ class Evaluator:
         return {"A": 1.0}
 
 
+def calc_gp_loss
+
 def train(
         model: nn.Module,
         loss_calc: Callable[[nn.Module, torch.Tensor, torch.Tensor], torch.Tensor],
@@ -141,7 +143,8 @@ def train(
         eval_freq_steps: int,
         evaluator: Evaluator,
         log_freq_steps: int = 100,
-        clip_gradients_norm: float | None = None
+        clip_grad_norm: float | None = None,
+        device: torch.device = torch.device("cpu"),
     ) -> None:
     """Trains model.
 
@@ -156,16 +159,22 @@ def train(
         evaluator: A handler for all model evaluations.
         log_freq_steps: Number of steps between basic progress logging to stdout.
             Defaults to 100.
-        clip_gradients_norm: Optional norm for gradient vectors to use for clipping.
+        clip_grad_norm: Optional norm for gradient vectors to use for clipping.
             Defaults to None.
+        device: The processor to use for training. Defaults to CPU.
 
     """
     if not isinstance(lr_schedule, optim.lr_scheduler.LRScheduler):
         lr_schedule = optim.lr_scheduler.LambdaLR(optimiser, lr_schedule)
 
+    model = model.to(device)
     step = 0
+
     for epoch in range(train_epochs):
         for X_batch, y_batch in train_dataloader:
+            X_batch = X_batch.to(device, non_blocking=True)
+            y_batch = y_batch.to(device, non_blocking=True)
+
             step += 1
             model.train()
             optimiser.zero_grad()
@@ -173,10 +182,8 @@ def train(
             loss = loss_calc(model, X_batch, y_batch)
             loss.backward()
 
-            if clip_gradients_norm:
-                nn.utils.clip_grad_norm_(
-                    model.parameters(), max_norm=clip_gradients_norm
-                )
+            if clip_grad_norm:
+                nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_grad_norm)
 
             optimiser.step()
             lr_schedule.step()
