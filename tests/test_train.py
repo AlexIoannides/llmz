@@ -12,14 +12,7 @@ class TestData(Dataset):
     """Simple dataset to use for testing."""
 
     def __init__(self, vocab_size: int = 10, max_length: int = 32, n_obs: int = 10):
-        """Initialise.
-
-        Args:
-            vocab_size: The number of tokens in our dataset.
-            max_length: Number of tokens for each data instance. Defaults to 32.
-            n_obs: Number of observations. Default to 10.
-
-        """
+        """Initialise."""
         self.vocab_size = vocab_size
         self.max_length = max_length
         self.n_obs = n_obs
@@ -60,9 +53,10 @@ def dataloader(dataset: Dataset) -> DataLoader:
 
 
 @pytest.fixture
-def model() -> DataLoader:
+def model() -> nn.Module:
     """Make model for testing."""
     return TestModel()
+
 
 
 def test_LinearWarmupCosineAnnealingLRSchedule_input_validation():
@@ -111,6 +105,7 @@ def test_evaluator_compute_metrics(model: nn.Module, dataloader: DataLoader):
 def test_evaluator_compute_scenarios(model: nn.Module):
     scenarios = Evaluator._compute_scenarios(model)
     assert scenarios is not None
+
 
 def test_evaluator_computes_evaluations(model: nn.Module, dataloader: DataLoader):
     eval = Evaluator(dataloader, dataloader)
