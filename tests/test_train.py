@@ -1,5 +1,8 @@
 """Tests for model training loops."""
 
+from math import log
+from unittest.mock import Mock
+
 import pytest
 import torch
 from torch import nn
@@ -13,11 +16,12 @@ from llmz.train import (
 )
 
 
-class TestData(Dataset):
+class ToyData(Dataset):
     """Simple dataset to use for testing."""
 
     def __init__(self, vocab_size: int = 10, max_length: int = 32, n_obs: int = 10):
         """Initialise."""
+        super().__init__()
         self.vocab_size = vocab_size
         self.max_length = max_length
         self.n_obs = n_obs
@@ -30,11 +34,12 @@ class TestData(Dataset):
         return self.n_obs
 
 
-class TestModel(nn.Module):
+class ToyModel(nn.Module):
     """Simple model to use for testing."""
 
     def __init__(self, vocab_size: int = 10, embed_dim: int = 32):
         """Initialise."""
+        super().__init__()
         self.embed = nn.Embedding(vocab_size, embed_dim)
         self.ffn = nn.Linear(embed_dim, vocab_size)
 
@@ -48,7 +53,7 @@ class TestModel(nn.Module):
 @pytest.fixture
 def dataset() -> Dataset:
     """Make dataset for testing."""
-    return TestData()
+    return ToyData()
 
 
 @pytest.fixture
@@ -60,7 +65,7 @@ def dataloader(dataset: Dataset) -> DataLoader:
 @pytest.fixture
 def model() -> nn.Module:
     """Make model for testing."""
-    return TestModel()
+    return ToyModel()
 
 
 
@@ -131,5 +136,34 @@ def test_train_runs_logs_to_stdout():
 
 
 def test_autoregressive_llm_loss(model: nn.Module):
-    # patch the forward pass of the model to be deterministic?
-    pass
+    X_batch = torch.zeros([2, 2, 3], dtype=torch.int)
+    y_batch = torch.tensor([[0, 1], [2, 1]])
+
+    mock_model = Mock(model)
+    mock_model.return_value = torch.tensor(
+        [
+            [[0.5, 0.0, 0.0], [0.0, 0.5, 0.0]],
+            [[0.0, 0.0, 0.5], [0.0, 0.5, 0.0]],
+        ]
+    )
+
+    # row-wise softmax of the patched model return values w/ flatten(0, 1)
+    probs = torch.tensor(
+        [
+            [0.4519, 0.2741, 0.2741],
+            [0.2741, 0.4519, 0.2741],
+            [0.2741, 0.2741, 0.4519],
+            [0.2741, 0.4519, 0.2741]
+        ]
+    )
+
+    expected_loss = -0.25 * (
+        1 * log(probs[0, 0]) + 0 * log(probs[0, 1]) + 0 * log(probs[0, 2]) +
+        0 * log(probs[1, 0]) + 1 * log(probs[1, 1]) + 0 * log(probs[1, 2]) +
+        0 * log(probs[2, 0]) + 0 * log(probs[2, 1]) + 1 * log(probs[2, 2]) +
+        0 * log(probs[3, 0]) + 1 * log(probs[3, 1]) + 0 * log(probs[3, 2])
+    )
+
+    actual_loss = autoregressive_llm_loss(mock_model, X_batch, y_batch).item()
+
+    assert actual_loss == pytest.approx(expected_loss, rel=0.001)

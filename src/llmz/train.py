@@ -207,4 +207,10 @@ def autoregressive_llm_loss(
         Mean cross-entropy loss for the batch.
 
     """
-    return torch.tensor(0.0)
+    # model outputs logits as softmax is implemented in cross-entropy calc.
+    logits = model(X_batch)
+
+    # flatten logits from [BATCH, SEQ_LEN, N_CLASSES] to [BATCH*SEQ_LEN, N_CLASSES]
+    # flatten y_batch from [BATCH, SEQ_LEN] to [BATCH * SEQ_LEN]
+    loss = nn.functional.cross_entropy(logits.flatten(0, 1), y_batch.flatten())
+    return loss
