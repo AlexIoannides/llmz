@@ -5,7 +5,12 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
-from llmz.train import Evaluator, LinearWarmupCosineAnnealingLRSchedule, train
+from llmz.train import (
+    Evaluator,
+    LinearWarmupCosineAnnealingLRSchedule,
+    autoregressive_llm_loss,
+    train,
+)
 
 
 class TestData(Dataset):
@@ -122,4 +127,9 @@ def test_train_runs_all_steps_end_to_end():
 
 
 def test_train_runs_logs_to_stdout():
+    pass
+
+
+def test_autoregressive_llm_loss(model: nn.Module):
+    # patch the forward pass of the model to be deterministic?
     pass
