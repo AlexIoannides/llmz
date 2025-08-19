@@ -163,6 +163,7 @@ def test_train_runs_all_steps_end_to_end(
     )
 
     assert mock_optimiser.step.call_count == total_steps
+    assert mock_optimiser.zero_grad.call_count == total_steps
     assert mock_lr_schedule.step.call_count == total_steps
     assert mock_evaluator.evaluate.call_count == total_steps // eval_freq
 
