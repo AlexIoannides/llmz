@@ -31,13 +31,13 @@ class LinearWarmupCosineAnnealingLRSchedule:
         """
         value_errors: list[str] = []
         if num_steps <= 0:
-            value_errors.append(" num_steps <= 0")
+            value_errors.append(" * num_steps <= 0")
         if warmup_steps > num_steps:
-            value_errors.append(" warmup_steps > num_steps")
+            value_errors.append(" * warmup_steps > num_steps")
         if initial_lr <= 0.0:
-            value_errors.append(" initial_lr <= 0.0")
+            value_errors.append(" * initial_lr <= 0.0")
         if peak_lr < initial_lr:
-            value_errors.append(" peak_lr < initial_lr")
+            value_errors.append(" * peak_lr < initial_lr")
 
         if value_errors:
             e = ValueError("Invalid arguments for LR schedule")
@@ -141,7 +141,7 @@ def train(
         eval_freq_steps: int,
         evaluator: Evaluator,
         log_freq_steps: int = 100,
-        clip_grad_norm: float | None = None,
+        clip_grad_norm: float = torch.inf,
         device: torch.device = torch.device("cpu"),
     ) -> None:
     """Trains model.
@@ -157,8 +157,8 @@ def train(
         evaluator: A handler for all model evaluations.
         log_freq_steps: Number of steps between basic progress logging to stdout.
             Defaults to 100.
-        clip_grad_norm: Optional norm for gradient vectors to use for clipping.
-            Defaults to None.
+        clip_grad_norm: Norm for gradient vectors to use for clipping.
+            Defaults to `torch.inf`.
         device: The processor to use for training. Defaults to CPU.
 
     """
@@ -168,7 +168,7 @@ def train(
     model = model.to(device)
     step = 0
 
-    for epoch in range(train_epochs):
+    for epoch in range(1, train_epochs+1):
         for X_batch, y_batch in train_dataloader:
             X_batch = X_batch.to(device, non_blocking=True)
             y_batch = y_batch.to(device, non_blocking=True)
@@ -180,13 +180,12 @@ def train(
             loss = loss_calc(model, X_batch, y_batch)
             loss.backward()
 
-            if clip_grad_norm:
-                nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_grad_norm)
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_grad_norm)
 
             optimiser.step()
             lr_schedule.step()
 
-            if step % log_freq_steps:
+            if step % log_freq_steps == 0:
                 log.info(f"{step=}, {epoch=}")
 
             if step % eval_freq_steps == 0:

@@ -1,10 +1,13 @@
 """Tests for model training loops."""
 
+import logging
+import re
 from math import log
 from unittest.mock import Mock
 
 import pytest
 import torch
+from _pytest.logging import LogCaptureFixture
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
@@ -70,12 +73,12 @@ def model() -> nn.Module:
 
 
 def test_LinearWarmupCosineAnnealingLRSchedule_input_validation():
-    pattern = (
+    pattern = re.escape(
         "Invalid arguments for LR schedule\n"
-        " num_steps <= 0\n"
-        " warmup_steps > num_steps\n"
-        " initial_lr <= 0.0\n"
-        " peak_lr < initial_lr"
+        " * num_steps <= 0\n"
+        " * warmup_steps > num_steps\n"
+        " * initial_lr <= 0.0\n"
+        " * peak_lr < initial_lr"
     )
     with pytest.raises(ValueError, match=pattern):
         LinearWarmupCosineAnnealingLRSchedule(
@@ -122,17 +125,50 @@ def test_evaluator_computes_evaluations(model: nn.Module, dataloader: DataLoader
     assert eval is not None
 
 
-def test_train_runs_all_steps_end_to_end():
-    # calls loss_calc
-    # calls evaluator
-    # calls lr_schedule
-    # calls clip_grads
-    # updates model weights
-    pass
+def test_train_runs_all_steps_end_to_end(
+        model: nn.Module, dataloader: DataLoader, caplog: LogCaptureFixture
+    ):
+    mock_loss_calc = Mock(autoregressive_llm_loss)
+    mock_loss_calc.side_effect = lambda m, X, _: m(X).flatten().mean()  # misc f(model)
 
+    mock_optimiser = Mock(torch.optim.AdamW)
+    mock_lr_schedule = Mock(torch.optim.lr_scheduler.LRScheduler)
+    mock_evaluator = Mock(Evaluator)
 
-def test_train_runs_logs_to_stdout():
-    pass
+    epochs = 2
+    steps_per_epoch = len(dataloader)
+    eval_freq = 5
+    log_freq = 2
+
+    total_steps = epochs * steps_per_epoch
+
+    assert all(p.grad is None for p in model.parameters())
+
+    with caplog.at_level(logging.INFO):
+        train(
+            model=model,
+            loss_calc=mock_loss_calc,
+            optimiser=mock_optimiser,
+            lr_schedule=mock_lr_schedule,
+            train_dataloader=dataloader,
+            train_epochs=epochs,
+            eval_freq_steps=eval_freq,
+            evaluator=mock_evaluator,
+            log_freq_steps=log_freq,
+            clip_grad_norm=0.5
+        )
+
+    assert all(
+        p.grad.abs().max() <= 0.5 for p in model.parameters() if p.grad is not None
+    )
+
+    assert mock_optimiser.step.call_count == total_steps
+    assert mock_lr_schedule.step.call_count == total_steps
+    assert mock_evaluator.evaluate.call_count == total_steps // eval_freq
+
+    assert len(caplog.records) == total_steps // log_freq
+    assert caplog.messages[0] == "step=2, epoch=1"
+    assert caplog.messages[-1] == "step=10, epoch=2"
 
 
 def test_autoregressive_llm_loss(model: nn.Module):
