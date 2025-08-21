@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from llmz.train import (
     Evaluator,
+    GradientClipCallback,
     LinearWarmupCosineAnnealingLRSchedule,
     autoregressive_llm_loss,
     train,
@@ -125,6 +126,26 @@ def test_evaluator_computes_evaluations(model: nn.Module, dataloader: DataLoader
     assert eval is not None
 
 
+def test_GradientClipCallback(model: nn.Module, dataloader: DataLoader):
+    grad_clipper = GradientClipCallback(0.1)
+
+    X, _ = next(iter(dataloader))
+    out = model(X)
+    out.flatten().mean().backward()
+
+    max_grad_before_clip = max(
+        p.grad.abs().max().item() for p in model.parameters() if p.grad is not None
+    )
+
+    grad_clipper(model)
+
+    max_grad_after_clip = max(
+        p.grad.abs().max().item() for p in model.parameters() if p.grad is not None
+    )
+
+    assert max_grad_before_clip > max_grad_after_clip
+
+
 def test_train_runs_all_steps_end_to_end(
         model: nn.Module, dataloader: DataLoader, caplog: LogCaptureFixture
     ):
@@ -152,10 +173,10 @@ def test_train_runs_all_steps_end_to_end(
             lr_schedule=mock_lr_schedule,
             train_dataloader=dataloader,
             train_epochs=epochs,
+            model_backward_callbacks=None,
             eval_freq_steps=eval_freq,
             evaluator=mock_evaluator,
             log_freq_steps=log_freq,
-            clip_grad_norm=0.5
         )
 
     assert all(

@@ -131,18 +131,30 @@ class Evaluator:
         return {"A": 1.0}
 
 
+class GradientClipCallback:
+    """Callable class that clips model gradient using max norm."""
+
+    def __init__(self, clip_grad_norm: float = torch.inf):
+        """Initialise."""
+        self.clip_grad_norm = clip_grad_norm
+
+    def __call__(self, model: nn.Module) -> None:
+        """Clip model gradients."""
+        nn.utils.clip_grad_norm_(model.parameters(), max_norm=self.clip_grad_norm)
+
+
 def train(
-        model: nn.Module,
-        loss_calc: Callable[[nn.Module, torch.Tensor, torch.Tensor], torch.Tensor],
-        optimiser: optim.Optimizer,
-        lr_schedule: Callable[[int], float] | optim.lr_scheduler.LRScheduler,
-        train_dataloader: DataLoader,
-        train_epochs: int,
-        eval_freq_steps: int,
-        evaluator: Evaluator,
-        log_freq_steps: int = 100,
-        clip_grad_norm: float = torch.inf,
-        device: torch.device = torch.device("cpu"),
+    model: nn.Module,
+    loss_calc: Callable[[nn.Module, torch.Tensor, torch.Tensor], torch.Tensor],
+    optimiser: optim.Optimizer,
+    lr_schedule: Callable[[int], float] | optim.lr_scheduler.LRScheduler,
+    train_dataloader: DataLoader,
+    train_epochs: int,
+    eval_freq_steps: int,
+    evaluator: Evaluator,
+    model_backward_callbacks: list[Callable[[nn.Module], None]] | None = None,
+    log_freq_steps: int = 100,
+    device: torch.device = torch.device("cpu"),
     ) -> None:
     """Trains model.
 
@@ -155,10 +167,9 @@ def train(
         train_epochs: Number of training epochs.
         eval_freq_steps: Number of steps between evaluations.
         evaluator: A handler for all model evaluations.
+        model_backward_callbacks: Optional callbacks for model after backward pass.
         log_freq_steps: Number of steps between basic progress logging to stdout.
             Defaults to 100.
-        clip_grad_norm: Norm for gradient vectors to use for clipping.
-            Defaults to `torch.inf`.
         device: The processor to use for training. Defaults to CPU.
 
     """
@@ -180,7 +191,9 @@ def train(
             loss = loss_calc(model, X_batch, y_batch)
             loss.backward()
 
-            nn.utils.clip_grad_norm_(model.parameters(), max_norm=clip_grad_norm)
+            if model_backward_callbacks:
+                for callback in model_backward_callbacks:
+                    callback(model)
 
             optimiser.step()
             lr_schedule.step()
