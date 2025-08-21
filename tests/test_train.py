@@ -155,6 +155,7 @@ def test_train_runs_all_steps_end_to_end(
     mock_optimiser = Mock(torch.optim.AdamW)
     mock_lr_schedule = Mock(torch.optim.lr_scheduler.LRScheduler)
     mock_evaluator = Mock(Evaluator)
+    mock_callback = Mock(GradientClipCallback)
 
     epochs = 2
     steps_per_epoch = len(dataloader)
@@ -164,6 +165,36 @@ def test_train_runs_all_steps_end_to_end(
     total_steps = epochs * steps_per_epoch
 
     assert all(p.grad is None for p in model.parameters())
+
+    # with callbacks
+    with caplog.at_level(logging.INFO):
+        train(
+            model=model,
+            loss_calc=mock_loss_calc,
+            optimiser=mock_optimiser,
+            lr_schedule=mock_lr_schedule,
+            train_dataloader=dataloader,
+            train_epochs=epochs,
+            model_backward_callbacks=[mock_callback, mock_callback],
+            eval_freq_steps=eval_freq,
+            evaluator=mock_evaluator,
+            log_freq_steps=log_freq,
+        )
+
+    assert all(p.grad is not None for p in model.parameters())
+
+    assert mock_optimiser.step.call_count == total_steps
+    assert mock_optimiser.zero_grad.call_count == total_steps
+    assert mock_lr_schedule.step.call_count == total_steps
+    assert mock_evaluator.evaluate.call_count == total_steps // eval_freq
+    assert mock_callback.call_count == 2 * total_steps
+
+    assert len(caplog.records) == total_steps // log_freq
+    assert caplog.messages[0] == "step=2, epoch=1"
+    assert caplog.messages[-1] == "step=10, epoch=2"
+
+    # without callbacks
+    mock_callback.reset_mock()
 
     with caplog.at_level(logging.INFO):
         train(
@@ -179,18 +210,7 @@ def test_train_runs_all_steps_end_to_end(
             log_freq_steps=log_freq,
         )
 
-    assert all(
-        p.grad.abs().max() <= 0.5 for p in model.parameters() if p.grad is not None
-    )
-
-    assert mock_optimiser.step.call_count == total_steps
-    assert mock_optimiser.zero_grad.call_count == total_steps
-    assert mock_lr_schedule.step.call_count == total_steps
-    assert mock_evaluator.evaluate.call_count == total_steps // eval_freq
-
-    assert len(caplog.records) == total_steps // log_freq
-    assert caplog.messages[0] == "step=2, epoch=1"
-    assert caplog.messages[-1] == "step=10, epoch=2"
+    assert mock_callback.call_count == 0
 
 
 def test_autoregressive_llm_loss(model: nn.Module):
