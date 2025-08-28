@@ -4,10 +4,11 @@ import logging
 import math
 import sys
 from collections.abc import Callable
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import torch
 from torch import nn, optim
+from torch.nn import functional as f
 from torch.utils.data import DataLoader
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -118,12 +119,26 @@ class Evaluator:
             All evaluations for the model after training steps.
 
         """
-        pass
+        train_metrics = self._compute_metrics(model, self.train_dl, prefix="train")
+        val_metrics = self._compute_metrics(model, self.val_dl, prefix="val")
+        eval_record = EvalResult(step, {**train_metrics, **val_metrics})
+
+        if log:
+            log_msg = (
+                f"{eval_record.step=}: " +
+                ", ".join(f"{k}={v:.4f}" for k, v in eval_record.results.items())
+            )
+            log.info(log_msg)
 
     @staticmethod
-    def _compute_metrics(model: nn.Module, dataloader: DataLoader) -> dict[str, float]:
+    def _compute_metrics(
+        model: nn.Module, dl: DataLoader, prefix: str = "") -> dict[str, float]:
         """Compute all metrics for a dataloader."""
-        return {"A": 1.0}
+        loss = sum(
+            f.cross_entropy(model(X).flatten(0, 1), y.flatten()).item()
+            for X, y in dl
+        ) / len(dl)
+        return {prefix+"_"+"loss": loss}
 
     @staticmethod
     def _compute_scenarios(model: nn.Module) -> dict[str, float | int | str]:
@@ -222,7 +237,7 @@ def autoregressive_llm_loss(
     # model outputs logits as softmax is implemented in cross-entropy calc.
     logits = model(X_batch)
 
-    # flatten logits from [BATCH, SEQ_LEN, N_CLASSES] to [BATCH*SEQ_LEN, N_CLASSES]
+    # flatten logits from [BATCH, SEQ_LEN, N_CLASSES] to [BATCH * SEQ_LEN, N_CLASSES]
     # flatten y_batch from [BATCH, SEQ_LEN] to [BATCH * SEQ_LEN]
     loss = nn.functional.cross_entropy(logits.flatten(0, 1), y_batch.flatten())
     return loss

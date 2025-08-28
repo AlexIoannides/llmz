@@ -113,6 +113,7 @@ def test_LinearWarmupCosineAnnealingLRSchedule():
 
 def test_evaluator_compute_metrics(model: nn.Module, dataloader: DataLoader):
     metrics = Evaluator._compute_metrics(model, dataloader)
+    breakpoint()
     assert metrics is not None
 
 
@@ -123,7 +124,16 @@ def test_evaluator_compute_scenarios(model: nn.Module):
 
 def test_evaluator_computes_evaluations(model: nn.Module, dataloader: DataLoader):
     eval = Evaluator(dataloader, dataloader)
+    eval.evaluate(1, model)
     assert eval is not None
+
+
+def test_evaluator_logs_evaluations(
+        caplog: LogCaptureFixture, model: nn.Module, dataloader: DataLoader
+    ):
+    eval = Evaluator(dataloader, dataloader)
+    eval.evaluate(1, model)
+    assert caplog.text != ""
 
 
 def test_GradientClipCallback(model: nn.Module, dataloader: DataLoader):
