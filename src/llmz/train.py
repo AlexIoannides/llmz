@@ -91,6 +91,7 @@ class EvalResult(NamedTuple):
     results: dict[str, Result]
 
 
+# TODO: implement __getitem__ and __len__ for record access and iteration (and test it)
 class Evaluator:
     """Model evaluator.
 
