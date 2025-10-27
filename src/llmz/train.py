@@ -1,5 +1,6 @@
 """Functions for training LLMs."""
 
+# TODO: split Evaluator (and related funcs) into separate module when finished
 import logging
 import math
 import sys
@@ -19,8 +20,8 @@ class LinearWarmupCosineAnnealingLRSchedule:
     """LR schedule using cosine annealing with linear warmup."""
 
     def __init__(
-            self, num_steps: int, warmup_steps: int, initial_lr: float, peak_lr: float
-        ):
+        self, num_steps: int, warmup_steps: int, initial_lr: float, peak_lr: float
+    ):
         """Initialise.
 
         Args:
@@ -80,11 +81,14 @@ class LinearWarmupCosineAnnealingLRSchedule:
         return lr
 
 
+Result = float | int | str
+
+
 class EvalResult(NamedTuple):
     """Container for evaluation results produced during training."""
 
     step: int
-    results: dict[str, float | int | str]
+    results: dict[str, Result]
 
 
 class Evaluator:
@@ -93,21 +97,34 @@ class Evaluator:
     This class executes and stores all model evaluations during training.
     """
 
-    def __init__(self, train_dataloader: DataLoader, val_dataloader: DataLoader):
+    def __init__(
+        self,
+        train_dataloader: DataLoader,
+        val_dataloader: DataLoader,
+        metrics_fn: Callable[[nn.Module, DataLoader], dict[str, Result]],
+        scenarios_fn: Callable[[nn.Module], dict[str, Result]] | None = None,
+    ):
         """Initialise.
 
         Args:
             train_dataloader: DataLoader for training data.
             val_dataloader: DataLoader for validation data.
+            metrics_fn: Callable that returns a dictionary of metrics given a model and
+                a dataloader.
+            scenarios_fn: Optional callable that returns a dictionary of results/outputs
+                given a model - e.g., generated text given an example prompt. Defaults
+                to None.
 
         """
         self.train_dl = train_dataloader
         self.val_dl = val_dataloader
-        self._eval_records: list[EvalResult]
+        self.metrics_fn = metrics_fn
+        self.scenarios_fn = scenarios_fn
+        self._eval_records: list[EvalResult] = []
 
     def evaluate(
-            self, step: int, model: nn.Module, log: logging.Logger | None = log
-        ) -> None:
+        self, step: int, model: nn.Module, log: logging.Logger | None = log
+    ) -> None:
         """Evaluate model.
 
         Args:
@@ -119,31 +136,37 @@ class Evaluator:
             All evaluations for the model after training steps.
 
         """
-        train_metrics = self._compute_metrics(model, self.train_dl, prefix="train")
-        val_metrics = self._compute_metrics(model, self.val_dl, prefix="val")
-        eval_record = EvalResult(step, {**train_metrics, **val_metrics})
+        train_metrics = {
+            f"train_{k}": v for k, v in self.metrics_fn(model, self.train_dl).items()
+        }
+        val_metrics = {
+            f"val_{k}": v for k, v in self.metrics_fn(model, self.val_dl).items()
+        }
+        scenarios = self.scenarios_fn(model) if self.scenarios_fn else {}
+
+        eval_record = EvalResult(step, {**train_metrics, **val_metrics, **scenarios})
+        self._eval_records.append(eval_record)
 
         if log:
-            log_msg = (
-                f"{eval_record.step=}: " +
-                ", ".join(f"{k}={v:.4f}" for k, v in eval_record.results.items())
+            log_msg = f"{eval_record.step=}: " + ", ".join(
+                f"{k}={v}" for k, v in eval_record.results.items()
             )
             log.info(log_msg)
 
-    @staticmethod
-    def _compute_metrics(
-        model: nn.Module, dl: DataLoader, prefix: str = "") -> dict[str, float]:
-        """Compute all metrics for a dataloader."""
-        loss = sum(
-            f.cross_entropy(model(X).flatten(0, 1), y.flatten()).item()
-            for X, y in dl
-        ) / len(dl)
-        return {prefix+"_"+"loss": loss}
 
-    @staticmethod
-    def _compute_scenarios(model: nn.Module) -> dict[str, float | int | str]:
-        """Compute model output for specific input scenarios."""
-        return {"A": 1.0}
+# TODO: loop over batches in dataloader
+def basic_llm_metrics(model: nn.Module, dl: DataLoader) -> dict[str, float]:
+    """Compute basic LLM metrics for a dataloader.
+
+    Args:
+        model: Model to use for inference.
+        dl: Dataloader with data batches for inference.
+
+    """
+    loss = sum(
+        f.cross_entropy(model(X).flatten(0, 1), y.flatten()).item() for X, y in dl
+    ) / len(dl)
+    return {"loss": loss}
 
 
 class GradientClipCallback:
@@ -170,7 +193,7 @@ def train(
     model_backward_callbacks: list[Callable[[nn.Module], None]] | None = None,
     log_freq_steps: int = 100,
     device: torch.device = torch.device("cpu"),
-    ) -> None:
+) -> None:
     """Trains model.
 
     Args:
@@ -194,7 +217,7 @@ def train(
     model = model.to(device)
     step = 0
 
-    for epoch in range(1, train_epochs+1):
+    for epoch in range(1, train_epochs + 1):
         for X_batch, y_batch in train_dataloader:
             X_batch = X_batch.to(device, non_blocking=True)
             y_batch = y_batch.to(device, non_blocking=True)
@@ -221,8 +244,8 @@ def train(
 
 
 def autoregressive_llm_loss(
-        model: nn.Module, X_batch: torch.Tensor, y_batch: torch.Tensor
-    ) -> torch.Tensor:
+    model: nn.Module, X_batch: torch.Tensor, y_batch: torch.Tensor
+) -> torch.Tensor:
     """Compute loss for AR LLMs like GPTs.
 
     Args:

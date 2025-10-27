@@ -1,8 +1,9 @@
 """Tests for model training loops."""
 
 import logging
+import math
 import re
-from math import log
+from collections.abc import Callable
 from unittest.mock import Mock
 
 import pytest
@@ -16,6 +17,8 @@ from llmz.train import (
     GradientClipCallback,
     LinearWarmupCosineAnnealingLRSchedule,
     autoregressive_llm_loss,
+    basic_llm_metrics,
+    log,
     train,
 )
 
@@ -31,8 +34,10 @@ class ToyData(Dataset):
         self.n_obs = n_obs
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
-        fake_tokens_chunk = torch.randint(0, self.vocab_size-1, (self.max_length+1,))
-        return fake_tokens_chunk[:self.max_length], fake_tokens_chunk[1:]
+        fake_tokens_chunk = torch.randint(
+            0, self.vocab_size - 1, (self.max_length + 1,)
+        )
+        return fake_tokens_chunk[: self.max_length], fake_tokens_chunk[1:]
 
     def __len__(self) -> int:
         return self.n_obs
@@ -72,6 +77,21 @@ def model() -> nn.Module:
     return ToyModel()
 
 
+@pytest.fixture
+def eval_metrics_fn() -> Callable[[nn.Module, DataLoader], dict[str, float]]:
+    def f(m: nn.Module, dl: DataLoader) -> dict[str, float]:
+        return {"loss": 0.1}
+
+    return f
+
+
+@pytest.fixture
+def eval_scenarios_fn() -> Callable[[nn.Module], dict[str, str]]:
+    def f(m: nn.Module) -> dict[str, str]:
+        return {"sample_text": "I've seen things..."}
+
+    return f
+
 
 def test_LinearWarmupCosineAnnealingLRSchedule_input_validation():
     pattern = re.escape(
@@ -83,19 +103,13 @@ def test_LinearWarmupCosineAnnealingLRSchedule_input_validation():
     )
     with pytest.raises(ValueError, match=pattern):
         LinearWarmupCosineAnnealingLRSchedule(
-            num_steps=-1,
-            warmup_steps=0,
-            initial_lr=0.0,
-            peak_lr=-1.0
+            num_steps=-1, warmup_steps=0, initial_lr=0.0, peak_lr=-1.0
         )
 
 
 def test_LinearWarmupCosineAnnealingLRSchedule():
     lr_schedule = LinearWarmupCosineAnnealingLRSchedule(
-        num_steps=100,
-        warmup_steps=30,
-        initial_lr=0.001,
-        peak_lr=0.01
+        num_steps=100, warmup_steps=30, initial_lr=0.001, peak_lr=0.01
     )
     # At step 0, should be initial_lr
     assert lr_schedule(0) == 0.001
@@ -111,29 +125,44 @@ def test_LinearWarmupCosineAnnealingLRSchedule():
         lr_schedule(-1)
 
 
-def test_evaluator_compute_metrics(model: nn.Module, dataloader: DataLoader):
-    metrics = Evaluator._compute_metrics(model, dataloader)
-    breakpoint()
-    assert metrics is not None
-
-
-def test_evaluator_compute_scenarios(model: nn.Module):
-    scenarios = Evaluator._compute_scenarios(model)
-    assert scenarios is not None
-
-
-def test_evaluator_computes_evaluations(model: nn.Module, dataloader: DataLoader):
-    eval = Evaluator(dataloader, dataloader)
+def test_evaluator_computes_evaluation_metrics(
+    model: nn.Module, dataloader: DataLoader, eval_metrics_fn: Callable
+):
+    eval = Evaluator(dataloader, dataloader, eval_metrics_fn)
     eval.evaluate(1, model)
-    assert eval is not None
+    eval.evaluate(2, model)
+    assert len(eval._eval_records) == 2
+    assert eval._eval_records[0].step == 1
+    assert eval._eval_records[0].results == {"train_loss": 0.1, "val_loss": 0.1}
 
 
+def test_evaluator_computes_evaluation_scenarios(
+    model: nn.Module,
+    dataloader: DataLoader,
+    eval_metrics_fn: Callable,
+    eval_scenarios_fn: Callable,
+):
+    eval = Evaluator(dataloader, dataloader, eval_metrics_fn, eval_scenarios_fn)
+    eval.evaluate(1, model)
+    eval.evaluate(2, model)
+    assert eval._eval_records[0].results["sample_text"] == "I've seen things..."
+    assert eval._eval_records[1].results["sample_text"] == "I've seen things..."
+
+
+# fails - needs fixing and finishing
 def test_evaluator_logs_evaluations(
-        caplog: LogCaptureFixture, model: nn.Module, dataloader: DataLoader
-    ):
-    eval = Evaluator(dataloader, dataloader)
-    eval.evaluate(1, model)
-    assert caplog.text != ""
+    caplog: LogCaptureFixture, model: nn.Module, dataloader: DataLoader, eval_metrics_fn
+):
+    eval = Evaluator(dataloader, dataloader, eval_metrics_fn)
+    with caplog.at_level(logging.INFO):
+        eval.evaluate(1, model, log)
+    assert "train_loss=0.1" in caplog.text
+    assert "val_loss=0.1" in caplog.text
+
+
+# TODO: implement test
+def test_basic_llm_metrics():
+    assert basic_llm_metrics is not None
 
 
 def test_GradientClipCallback(model: nn.Module, dataloader: DataLoader):
@@ -157,8 +186,8 @@ def test_GradientClipCallback(model: nn.Module, dataloader: DataLoader):
 
 
 def test_train_runs_all_steps_end_to_end(
-        model: nn.Module, dataloader: DataLoader, caplog: LogCaptureFixture
-    ):
+    model: nn.Module, dataloader: DataLoader, caplog: LogCaptureFixture
+):
     mock_loss_calc = Mock(autoregressive_llm_loss)
     mock_loss_calc.side_effect = lambda m, X, _: m(X).flatten().mean()  # misc f(model)
 
@@ -241,15 +270,23 @@ def test_autoregressive_llm_loss(model: nn.Module):
             [0.4519, 0.2741, 0.2741],
             [0.2741, 0.4519, 0.2741],
             [0.2741, 0.2741, 0.4519],
-            [0.2741, 0.4519, 0.2741]
+            [0.2741, 0.4519, 0.2741],
         ]
     )
 
     expected_loss = -0.25 * (
-        1 * log(probs[0, 0]) + 0 * log(probs[0, 1]) + 0 * log(probs[0, 2]) +
-        0 * log(probs[1, 0]) + 1 * log(probs[1, 1]) + 0 * log(probs[1, 2]) +
-        0 * log(probs[2, 0]) + 0 * log(probs[2, 1]) + 1 * log(probs[2, 2]) +
-        0 * log(probs[3, 0]) + 1 * log(probs[3, 1]) + 0 * log(probs[3, 2])
+        1 * math.log(probs[0, 0])
+        + 0 * math.log(probs[0, 1])
+        + 0 * math.log(probs[0, 2])
+        + 0 * math.log(probs[1, 0])
+        + 1 * math.log(probs[1, 1])
+        + 0 * math.log(probs[1, 2])
+        + 0 * math.log(probs[2, 0])
+        + 0 * math.log(probs[2, 1])
+        + 1 * math.log(probs[2, 2])
+        + 0 * math.log(probs[3, 0])
+        + 1 * math.log(probs[3, 1])
+        + 0 * math.log(probs[3, 2])
     )
 
     actual_loss = autoregressive_llm_loss(mock_model, X_batch, y_batch).item()
