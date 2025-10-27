@@ -4,7 +4,7 @@ import nox
 
 nox.options.default_venv_backend = "uv"
 nox.options.sessions = [
-    "check_code_formatting",
+    "check_format_and_linting",
     "check_types",
     "test_docs_build",
     "run_tests",
@@ -29,17 +29,16 @@ def run_tests(session: nox.Session):
 
 
 @nox.session(python=None)
-def format_code(session: nox.Session):
+def format_and_lint(session: nox.Session):
     """Lint code and re-format where necessary."""
-    session.run("black", "--config=pyproject.toml", ".", external=True)
-    session.run("ruff", "check", ".", "--config=pyproject.toml", "--fix", external=True)
+    session.run("ruff", "format", "--config=pyproject.toml", external=True)
+    session.run("ruff", "check", "--fix", "--config=pyproject.toml", external=True)
 
 
 @nox.session(python=None)
-def check_code_formatting(session: nox.Session):
+def check_format_and_linting(session: nox.Session):
     """Check code for formatting errors."""
-    session.run("black", "--config=pyproject.toml", "--check", ".", external=True)
-    session.run("ruff", "check", ".", "--config=pyproject.toml", external=True)
+    session.run("ruff", "check", "--config=pyproject.toml", external=True)
 
 
 @nox.session(python=None)
