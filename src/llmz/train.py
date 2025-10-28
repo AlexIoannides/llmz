@@ -4,7 +4,7 @@
 import logging
 import math
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import NamedTuple
 
 import torch
@@ -153,6 +153,15 @@ class Evaluator:
                 f"{k}={v}" for k, v in eval_record.results.items()
             )
             log.info(log_msg)
+
+    def __getitem__(self, idx: int) -> EvalResult:
+        return self._eval_records[idx]
+
+    def __iter__(self) -> Iterator[EvalResult]:
+        return iter(self._eval_records)
+
+    def __len__(self) -> int:
+        return len(self._eval_records)
 
 
 # TODO: loop over batches in dataloader

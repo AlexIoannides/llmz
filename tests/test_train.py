@@ -13,6 +13,7 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 from llmz.train import (
+    EvalResult,
     Evaluator,
     GradientClipCallback,
     LinearWarmupCosineAnnealingLRSchedule,
@@ -125,7 +126,7 @@ def test_LinearWarmupCosineAnnealingLRSchedule():
         lr_schedule(-1)
 
 
-def test_evaluator_computes_evaluation_metrics(
+def test_Evaluator_computes_evaluation_metrics(
     model: nn.Module, dataloader: DataLoader, eval_metrics_fn: Callable
 ):
     eval = Evaluator(dataloader, dataloader, eval_metrics_fn)
@@ -136,7 +137,7 @@ def test_evaluator_computes_evaluation_metrics(
     assert eval._eval_records[0].results == {"train_loss": 0.1, "val_loss": 0.1}
 
 
-def test_evaluator_computes_evaluation_scenarios(
+def test_Evaluator_computes_evaluation_scenarios(
     model: nn.Module,
     dataloader: DataLoader,
     eval_metrics_fn: Callable,
@@ -149,8 +150,7 @@ def test_evaluator_computes_evaluation_scenarios(
     assert eval._eval_records[1].results["sample_text"] == "I've seen things..."
 
 
-# fails - needs fixing and finishing
-def test_evaluator_logs_evaluations(
+def test_Evaluator_logs_evaluations(
     caplog: LogCaptureFixture, model: nn.Module, dataloader: DataLoader, eval_metrics_fn
 ):
     eval = Evaluator(dataloader, dataloader, eval_metrics_fn)
@@ -158,6 +158,23 @@ def test_evaluator_logs_evaluations(
         eval.evaluate(1, model, log)
     assert "train_loss=0.1" in caplog.text
     assert "val_loss=0.1" in caplog.text
+
+
+def test_Evaluator_iter(
+    model: nn.Module,
+    dataloader: DataLoader,
+    eval_metrics_fn: Callable,
+):
+    eval = Evaluator(dataloader, dataloader, eval_metrics_fn)
+    eval.evaluate(1, model)
+    eval.evaluate(2, model)
+
+    count = 0
+    for n, e in enumerate(eval):
+        assert isinstance(e, EvalResult)
+        assert isinstance(eval[n], EvalResult)
+        count += 1
+    assert count == len(eval) == 2
 
 
 # TODO: implement test
