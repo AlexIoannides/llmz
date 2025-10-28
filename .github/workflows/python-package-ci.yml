@@ -25,7 +25,7 @@ jobs:
         uv sync
     - name: Run code formatting checks
       run: |
-        uv run nox -s check_code_formatting
+        uv run nox -s check_format_and_linting
     - name: Run static type checking
       run: |
         uv run nox -s check_types
