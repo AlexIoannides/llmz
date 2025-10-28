@@ -16,7 +16,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "black>=24.10.0",
     "icecream>=2.1.3",
     "mypy>=1.13.0",
     "nox>=2024.10.9",
@@ -35,12 +34,13 @@ build-backend = "hatchling.build"
 line-length = 88
 
 [tool.ruff]
-src = ["src"]
+src = ["src", "tests"]
 line-length = 88
 lint.select = [
   "D",   # pydocstyle
   "E",   # pycodestyle errors
   "F",   # pyflakes
+  "FIX", # flake8-fixme
   "I",   # isort
   "UP",  # pyupgrade
   "W",   # pycodestyle warnings
