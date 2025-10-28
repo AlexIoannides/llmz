@@ -3,95 +3,21 @@
 import logging
 import math
 import re
-from collections.abc import Callable
 from unittest.mock import Mock
 
 import pytest
 import torch
 from _pytest.logging import LogCaptureFixture
 from torch import nn
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 
+from llmz.evaluate import Evaluator
 from llmz.train import (
-    EvalResult,
-    Evaluator,
     GradientClipCallback,
     LinearWarmupCosineAnnealingLRSchedule,
     autoregressive_llm_loss,
-    basic_llm_metrics,
-    log,
     train,
 )
-
-
-class ToyData(Dataset):
-    """Simple dataset to use for testing."""
-
-    def __init__(self, vocab_size: int = 10, max_length: int = 32, n_obs: int = 10):
-        """Initialise."""
-        super().__init__()
-        self.vocab_size = vocab_size
-        self.max_length = max_length
-        self.n_obs = n_obs
-
-    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
-        fake_tokens_chunk = torch.randint(
-            0, self.vocab_size - 1, (self.max_length + 1,)
-        )
-        return fake_tokens_chunk[: self.max_length], fake_tokens_chunk[1:]
-
-    def __len__(self) -> int:
-        return self.n_obs
-
-
-class ToyModel(nn.Module):
-    """Simple model to use for testing."""
-
-    def __init__(self, vocab_size: int = 10, embed_dim: int = 32):
-        """Initialise."""
-        super().__init__()
-        self.embed = nn.Embedding(vocab_size, embed_dim)
-        self.ffn = nn.Linear(embed_dim, vocab_size)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass."""
-        out = self.embed(x)
-        out = self.ffn(out)
-        return out
-
-
-@pytest.fixture
-def dataset() -> Dataset:
-    """Make dataset for testing."""
-    return ToyData()
-
-
-@pytest.fixture
-def dataloader(dataset: Dataset) -> DataLoader:
-    """Make dataloader for testing."""
-    return DataLoader(dataset, 2)
-
-
-@pytest.fixture
-def model() -> nn.Module:
-    """Make model for testing."""
-    return ToyModel()
-
-
-@pytest.fixture
-def eval_metrics_fn() -> Callable[[nn.Module, DataLoader], dict[str, float]]:
-    def f(m: nn.Module, dl: DataLoader) -> dict[str, float]:
-        return {"loss": 0.1}
-
-    return f
-
-
-@pytest.fixture
-def eval_scenarios_fn() -> Callable[[nn.Module], dict[str, str]]:
-    def f(m: nn.Module) -> dict[str, str]:
-        return {"sample_text": "I've seen things..."}
-
-    return f
 
 
 def test_LinearWarmupCosineAnnealingLRSchedule_input_validation():
@@ -124,62 +50,6 @@ def test_LinearWarmupCosineAnnealingLRSchedule():
     pattern = "step=-1, must be > 0"
     with pytest.raises(ValueError, match=pattern):
         lr_schedule(-1)
-
-
-def test_Evaluator_computes_evaluation_metrics(
-    model: nn.Module, dataloader: DataLoader, eval_metrics_fn: Callable
-):
-    eval = Evaluator(dataloader, dataloader, eval_metrics_fn)
-    eval.evaluate(1, model)
-    eval.evaluate(2, model)
-    assert len(eval._eval_records) == 2
-    assert eval._eval_records[0].step == 1
-    assert eval._eval_records[0].results == {"train_loss": 0.1, "val_loss": 0.1}
-
-
-def test_Evaluator_computes_evaluation_scenarios(
-    model: nn.Module,
-    dataloader: DataLoader,
-    eval_metrics_fn: Callable,
-    eval_scenarios_fn: Callable,
-):
-    eval = Evaluator(dataloader, dataloader, eval_metrics_fn, eval_scenarios_fn)
-    eval.evaluate(1, model)
-    eval.evaluate(2, model)
-    assert eval._eval_records[0].results["sample_text"] == "I've seen things..."
-    assert eval._eval_records[1].results["sample_text"] == "I've seen things..."
-
-
-def test_Evaluator_logs_evaluations(
-    caplog: LogCaptureFixture, model: nn.Module, dataloader: DataLoader, eval_metrics_fn
-):
-    eval = Evaluator(dataloader, dataloader, eval_metrics_fn)
-    with caplog.at_level(logging.INFO):
-        eval.evaluate(1, model, log)
-    assert "train_loss=0.1" in caplog.text
-    assert "val_loss=0.1" in caplog.text
-
-
-def test_Evaluator_iter(
-    model: nn.Module,
-    dataloader: DataLoader,
-    eval_metrics_fn: Callable,
-):
-    eval = Evaluator(dataloader, dataloader, eval_metrics_fn)
-    eval.evaluate(1, model)
-    eval.evaluate(2, model)
-
-    count = 0
-    for n, e in enumerate(eval):
-        assert isinstance(e, EvalResult)
-        assert isinstance(eval[n], EvalResult)
-        count += 1
-    assert count == len(eval) == 2
-
-
-# TODO: implement test
-def test_basic_llm_metrics():
-    assert basic_llm_metrics is not None
 
 
 def test_GradientClipCallback(model: nn.Module, dataloader: DataLoader):
