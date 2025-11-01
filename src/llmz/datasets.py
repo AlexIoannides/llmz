@@ -30,10 +30,10 @@ class GPTSmallTextDataset(Dataset):
         if n_instances == 0:
             raise RuntimeError("max_length + stride <= number of tokens")
 
-        self._X = torch.ones((n_instances, max_length))
-        self._y = torch.ones((n_instances, max_length))
+        self._X = torch.ones((n_instances, max_length), dtype=torch.long)
+        self._y = torch.ones((n_instances, max_length), dtype=torch.long)
 
-        for n, i in enumerate(range(0, n_instances*stride, stride)):
+        for n, i in enumerate(range(0, n_instances * stride, stride)):
             self._X[n,] = torch.tensor(tokens[i : i + max_length])
             self._y[n,] = torch.tensor(tokens[i + 1 : i + max_length + 1])
 
