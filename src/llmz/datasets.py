@@ -37,6 +37,8 @@ class GPTSmallTextDataset(Dataset):
             self._X[n,] = torch.tensor(tokens[i : i + max_length])
             self._y[n,] = torch.tensor(tokens[i + 1 : i + max_length + 1])
 
+        self.vocab_size = tokenizer.n_vocab
+
     def create_data_loader(
         self,
         batch_size: int = 4,
