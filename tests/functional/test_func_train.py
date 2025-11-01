@@ -6,9 +6,10 @@ from typing import cast
 import torch
 from torch.optim import AdamW
 
-from llmz.datasets import GPTSmallTextDataset
+from llmz.datasets import GPT2SmallTextDataset
 from llmz.evaluate import Evaluator, basic_llm_metrics
-from llmz.gpt2 import GPT2, GPT2Config
+from llmz.generate import generate
+from llmz.gpt2 import GPT2, GPT2Config, GPT2Tokenizer
 from llmz.train import (
     LinearWarmupCosineAnnealingLRSchedule,
     autoregressive_llm_loss,
@@ -26,11 +27,11 @@ def test_GPT2_train_end_to_end(text_data_file: Path):
     batch_size = 8
     device = torch.device("cpu")
 
-    train_ds = GPTSmallTextDataset(text_data_file.read_text(), context_size)
+    train_ds = GPT2SmallTextDataset(text_data_file.read_text(), context_size)
     train_dl = train_ds.create_data_loader(batch_size, num_workers=1)
 
     model_config = GPT2Config(
-        vocab_size=train_ds.vocab_size,
+        vocab_size=train_ds.tokenizer.vocab_size,
         embed_dim=256,
         context_size=context_size,
         n_tsfmr_blocks=1,
@@ -72,3 +73,15 @@ def test_GPT2_train_end_to_end(text_data_file: Path):
     train_loss_beginning = cast(float, evals[0].results["train_loss"])
     train_loss_end = cast(float, evals[total_epochs - 1].results["train_loss"])
     assert train_loss_beginning > train_loss_end
+
+    prompt = "I've seen things you people wouldn't believe"
+    generated_text = generate(
+        model=model,
+        prompt=prompt,
+        tokenizer=GPT2Tokenizer(),
+        strategy="greedy",
+        output_length=60,
+        device=device,
+    )
+
+    assert len(generated_text) > len(prompt)
