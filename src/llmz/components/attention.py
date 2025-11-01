@@ -89,7 +89,9 @@ class MultiHeadAttention(nn.Module):
         context_embeddings = (attn_weights @ values).transpose(1, 2)
 
         # reshape to factor-out the multiple heads and take into account dim_out
-        context_embeddings = context_embeddings.view(batch_size, seq_len, self.dim_out)
+        context_embeddings = context_embeddings.reshape(
+            batch_size, seq_len, self.dim_out
+        )
         context_embeddings = self.out_proj(context_embeddings)
         return context_embeddings
 
