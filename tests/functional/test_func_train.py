@@ -21,7 +21,7 @@ def test_GPT2_train_end_to_end(text_data_file: Path):
 
     context_size = 256
     warmup_epochs = 2
-    total_epochs = 5
+    total_epochs = 10
     lr = 0.005
     batch_size = 8
     device = torch.device("cpu")
