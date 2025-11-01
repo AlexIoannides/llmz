@@ -33,7 +33,7 @@ class GPTSmallTextDataset(Dataset):
         self._X = torch.ones((n_instances, max_length))
         self._y = torch.ones((n_instances, max_length))
 
-        for n, i in enumerate(range(0, n_tokens - max_length, stride)):
+        for n, i in enumerate(range(0, n_instances*stride, stride)):
             self._X[n,] = torch.tensor(tokens[i : i + max_length])
             self._y[n,] = torch.tensor(tokens[i + 1 : i + max_length + 1])
 
