@@ -14,7 +14,7 @@ PYTHON = "3.12"
 
 
 @nox.session(python=PYTHON)
-def run_tests(session: nox.Session):
+def run_unit_tests(session: nox.Session):
     """Run unit tests."""
     session.run_install(
         "uv",
@@ -25,7 +25,22 @@ def run_tests(session: nox.Session):
         },
     )
     pytest_args = session.posargs if session.posargs else []
-    session.run("pytest", *pytest_args)
+    session.run("pytest", "tests/unit", *pytest_args)
+
+
+@nox.session(python=PYTHON)
+def run_func_tests(session: nox.Session):
+    """Run unit tests."""
+    session.run_install(
+        "uv",
+        "sync",
+        env={
+            "UV_PROJECT_ENVIRONMENT": session.virtualenv.location,
+            "UV_LINK_MODE": "copy",
+        },
+    )
+    pytest_args = session.posargs if session.posargs else []
+    session.run("pytest", "tests/functional", *pytest_args)
 
 
 @nox.session(python=None)
