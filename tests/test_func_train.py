@@ -1,7 +1,9 @@
 """Functional for end-to-end training."""
 
 from pathlib import Path
+from typing import cast
 
+import torch
 from torch.optim import AdamW
 
 from llmz.datasets import GPTSmallTextDataset
@@ -15,33 +17,40 @@ from llmz.train import (
 
 
 def test_GPT2_train_end_to_end(text_data_file: Path):
+    torch.manual_seed(1980)
+
     context_size = 256
     warmup_epochs = 2
-    total_epochs = 12
-    lr = 0.001
-    batch_size=8
+    total_epochs = 5
+    lr = 0.005
+    batch_size = 8
+    device = torch.device("cpu")
 
     train_ds = GPTSmallTextDataset(text_data_file.read_text(), context_size)
-    train_dl = train_ds.create_data_loader(batch_size)
+    train_dl = train_ds.create_data_loader(batch_size, num_workers=2)
 
     model_config = GPT2Config(
         vocab_size=train_ds.vocab_size,
         embed_dim=256,
         context_size=context_size,
-        n_tsfmr_blocks=1, n_attn_heads=4,
+        n_tsfmr_blocks=1,
+        n_attn_heads=4,
     )
 
     model = GPT2(**model_config)
 
     evals = Evaluator(
-        train_dataloader=train_dl, val_dataloader=train_dl, metrics_fn=basic_llm_metrics
+        train_dataloader=train_dl,
+        val_dataloader=train_dl,
+        metrics_fn=basic_llm_metrics,
+        device=device,
     )
 
     steps_per_epoch = int(len(train_ds) / batch_size)
     lr_schedule = LinearWarmupCosineAnnealingLRSchedule(
-        num_steps=total_epochs*steps_per_epoch,
-        warmup_steps=warmup_epochs*steps_per_epoch,
-        initial_lr=lr/100,
+        num_steps=total_epochs * steps_per_epoch,
+        warmup_steps=warmup_epochs * steps_per_epoch,
+        initial_lr=lr / 100,
         peak_lr=lr,
     )
 
@@ -57,5 +66,9 @@ def test_GPT2_train_end_to_end(text_data_file: Path):
         evaluator=evals,
         eval_freq_steps=steps_per_epoch,
         log_freq_steps=steps_per_epoch,
+        device=device,
     )
 
+    train_loss_beginning = cast(float, evals[0].results["train_loss"])
+    train_loss_end = cast(float, evals[total_epochs - 1].results["train_loss"])
+    assert train_loss_beginning > train_loss_end
