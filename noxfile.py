@@ -20,11 +20,11 @@ def run_unit_tests(session: nox.Session):
     session.run(
         "pytest",
         "--cov=llmz",
-        "--cov-append",
         "--cov-report=",
         "tests/unit",
         *pytest_args,
         external=True,
+        env={"COVERAGE_FILE": ".coverage.unit"},
     )
 
 
@@ -35,17 +35,20 @@ def run_func_tests(session: nox.Session):
     session.run(
         "pytest",
         "--cov=llmz",
-        "--cov-append",
         "--cov-report=",
         "tests/functional",
         *pytest_args,
         external=True,
+        env={"COVERAGE_FILE": ".coverage.func"},
     )
 
 
 @nox.session(python=None)
 def compute_test_coverage(session: nox.Session):
     """Compute test coverage after unit and functional tests."""
+    session.run(
+        "coverage", "combine", ".coverage.unit", ".coverage.func", external=True
+    )
     session.run("coverage", "report", "--fail-under=95", external=True)
 
 
