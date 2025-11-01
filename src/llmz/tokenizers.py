@@ -15,6 +15,11 @@ class _Tokenizer(ABC):
     def __call__(self, text: str) -> list[int]:
         return self.text2tokens(text)
 
+    @property
+    @abstractmethod
+    def vocab_size(self) -> int:
+        pass
+
     @abstractmethod
     def text2tokens(self, text: str) -> list[int]:
         pass

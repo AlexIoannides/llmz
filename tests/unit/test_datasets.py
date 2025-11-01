@@ -4,18 +4,18 @@ import pytest
 import tiktoken
 import torch
 
-from llmz.datasets import GPTSmallTextDataset
+from llmz.datasets import GPT2SmallTextDataset
 
 
 @pytest.mark.parametrize("stride", [1, 2, 3])
-def test_GPTSmallTextDataset_encodes_data(stride: int):
+def test_GPT2SmallTextDataset_encodes_data(stride: int):
     text = "Attacks ships off the shoulder of Orion."
     max_len = 3
 
     tokenizer = tiktoken.get_encoding("gpt2")
     exp_tokens = tokenizer.encode(text)
 
-    dataset = GPTSmallTextDataset(text, max_len, stride)
+    dataset = GPT2SmallTextDataset(text, max_len, stride)
     X_0, y_0 = dataset[0]
     X_1, y_1 = dataset[1]
 
@@ -32,18 +32,18 @@ def test_GPTSmallTextDataset_encodes_data(stride: int):
     assert y_1[-1] == exp_tokens[stride + max_len]
 
 
-def test_GPTSmallTextDataset_raises_errors():
+def test_GPT2SmallTextDataset_raises_errors():
     text = "Attacks ships off the shoulder of Orion."
     max_len = 9
 
     with pytest.raises(RuntimeError, match="max_length"):
-        GPTSmallTextDataset(text, max_len)
+        GPT2SmallTextDataset(text, max_len)
 
 
-def test_GPTSmallTextDataset_create_data_loader():
+def test_GPT2SmallTextDataset_create_data_loader():
     text = "Attacks ships off the shoulder of Orion."
 
-    dataset = GPTSmallTextDataset(text, max_length=3, stride=1)
+    dataset = GPT2SmallTextDataset(text, max_length=3, stride=1)
     dataloader_iter = iter(dataset.create_data_loader(batch_size=2))
     b0_X, b0_y = next(dataloader_iter)
     b1_X, b1_y = next(dataloader_iter)
