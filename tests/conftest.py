@@ -82,6 +82,6 @@ def eval_scenarios_fn() -> Callable[[nn.Module], dict[str, str]]:
 
 
 @pytest.fixture
-def raw_text_data() -> Path:
+def text_data_file() -> Path:
     """Path to text file to use for training."""
     return Path("tests/resources/the-verdict.txt")
