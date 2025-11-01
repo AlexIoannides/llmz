@@ -1,6 +1,7 @@
 """Pytest fixture and other testing common testing utilities."""
 
 from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 import torch
@@ -64,6 +65,7 @@ def model() -> nn.Module:
 
 @pytest.fixture
 def eval_metrics_fn() -> Callable[[nn.Module, DataLoader], dict[str, float]]:
+    """Make evaluation metrics callable."""
     def f(m: nn.Module, dl: DataLoader) -> dict[str, float]:
         return {"loss": 0.1}
 
@@ -72,7 +74,14 @@ def eval_metrics_fn() -> Callable[[nn.Module, DataLoader], dict[str, float]]:
 
 @pytest.fixture
 def eval_scenarios_fn() -> Callable[[nn.Module], dict[str, str]]:
+    """Make evaluation scenarios callable."""
     def f(m: nn.Module) -> dict[str, str]:
         return {"sample_text": "I've seen things..."}
 
     return f
+
+
+@pytest.fixture
+def raw_text_data() -> Path:
+    """Path to text file to use for training."""
+    return Path("tests/resources/the-verdict.txt")
