@@ -38,3 +38,6 @@ jobs:
     - name: Run functional tests
       run: |
         uv run nox -s run_func_tests-${{ matrix.python-version }}
+    - name: Compute test coverage
+      run: |
+        uv run nox -s compute_test_coverage
