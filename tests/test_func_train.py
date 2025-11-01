@@ -27,7 +27,7 @@ def test_GPT2_train_end_to_end(text_data_file: Path):
     device = torch.device("cpu")
 
     train_ds = GPTSmallTextDataset(text_data_file.read_text(), context_size)
-    train_dl = train_ds.create_data_loader(batch_size, num_workers=2)
+    train_dl = train_ds.create_data_loader(batch_size, num_workers=1)
 
     model_config = GPT2Config(
         vocab_size=train_ds.vocab_size,
