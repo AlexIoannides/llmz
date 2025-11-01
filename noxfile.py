@@ -7,7 +7,9 @@ nox.options.sessions = [
     "check_format_and_linting",
     "check_types",
     "test_docs_build",
-    "run_tests",
+    "run_unit_tests",
+    "run_func_tests",
+    "compute_test_coverage",
 ]
 
 PYTHON = "3.12"
@@ -25,7 +27,14 @@ def run_unit_tests(session: nox.Session):
         },
     )
     pytest_args = session.posargs if session.posargs else []
-    session.run("pytest", "tests/unit", *pytest_args)
+    session.run(
+        "pytest",
+        "--cov=llmz",
+        "--cov-append",
+        "--cov-report=",
+        "tests/unit",
+        *pytest_args,
+    )
 
 
 @nox.session(python=PYTHON)
@@ -40,7 +49,21 @@ def run_func_tests(session: nox.Session):
         },
     )
     pytest_args = session.posargs if session.posargs else []
-    session.run("pytest", "tests/functional", *pytest_args)
+    session.run(
+        "pytest",
+        "--cov=llmz",
+        "--cov-append",
+        "--cov-report=",
+        "tests/functional",
+        *pytest_args,
+    )
+
+
+@nox.session(python=None)
+def compute_test_coverage(session: nox.Session):
+    """Compute test coverage after unit and functional tests."""
+    session.run("coverage", "combine", external=True)
+    session.run("coverage", "report", "--fail-under=90", external=True)
 
 
 @nox.session(python=None)
