@@ -1,12 +1,13 @@
 """Pytest fixture and other testing common testing utilities."""
 
-from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
+
+from llmz.evaluate import MetricResult, MetricsFunc, ScenarioResult, ScenariosFunc
 
 
 class ToyData(Dataset):
@@ -64,20 +65,22 @@ def model() -> nn.Module:
 
 
 @pytest.fixture
-def eval_metrics_fn() -> Callable[[nn.Module, DataLoader], dict[str, float]]:
+def eval_metrics_fn() -> MetricsFunc:
     """Make evaluation metrics callable."""
 
-    def f(m: nn.Module, dl: DataLoader) -> dict[str, float]:
+    def f(
+        m: nn.Module, dl: DataLoader, device: torch.device
+    ) -> dict[str, MetricResult]:
         return {"loss": 0.1}
 
     return f
 
 
 @pytest.fixture
-def eval_scenarios_fn() -> Callable[[nn.Module], dict[str, str]]:
+def eval_scenarios_fn() -> ScenariosFunc:
     """Make evaluation scenarios callable."""
 
-    def f(m: nn.Module) -> dict[str, str]:
+    def f(m: nn.Module, device: torch.device) -> dict[str, ScenarioResult]:
         return {"sample_text": "I've seen things..."}
 
     return f
