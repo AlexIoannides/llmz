@@ -1,11 +1,12 @@
 """Datasets for LLMs."""
 
-import tiktoken
 import torch
 from torch.utils.data import DataLoader, Dataset
 
+from llmz.gpt2 import GPT2Tokenizer
 
-class GPTSmallTextDataset(Dataset):
+
+class GPT2SmallTextDataset(Dataset):
     """GPT dataset interface for any 'small' text data.
 
     This will tokenize all text in-memory using a GPT2's tokenization algorithm, which
@@ -22,18 +23,18 @@ class GPTSmallTextDataset(Dataset):
                 128.
 
         """
-        tokenizer = tiktoken.get_encoding("gpt2")
-        tokens = tokenizer.encode(text)
+        self.tokenizer = GPT2Tokenizer()
+        tokens = self.tokenizer.text2tokens(text)
 
         n_tokens = len(tokens)
         n_instances = int((n_tokens - max_length) / stride)
         if n_instances == 0:
             raise RuntimeError("max_length + stride <= number of tokens")
 
-        self._X = torch.ones((n_instances, max_length))
-        self._y = torch.ones((n_instances, max_length))
+        self._X = torch.ones((n_instances, max_length), dtype=torch.long)
+        self._y = torch.ones((n_instances, max_length), dtype=torch.long)
 
-        for n, i in enumerate(range(0, n_tokens - max_length, stride)):
+        for n, i in enumerate(range(0, n_instances * stride, stride)):
             self._X[n,] = torch.tensor(tokens[i : i + max_length])
             self._y[n,] = torch.tensor(tokens[i + 1 : i + max_length + 1])
 

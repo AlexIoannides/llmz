@@ -7,25 +7,49 @@ nox.options.sessions = [
     "check_format_and_linting",
     "check_types",
     "test_docs_build",
-    "run_tests",
+    "run_unit_tests",
+    "run_func_tests",
+    "compute_test_coverage",
 ]
 
-PYTHON = "3.12"
 
-
-@nox.session(python=PYTHON)
-def run_tests(session: nox.Session):
+@nox.session(python=None)
+def run_unit_tests(session: nox.Session):
     """Run unit tests."""
-    session.run_install(
-        "uv",
-        "sync",
-        env={
-            "UV_PROJECT_ENVIRONMENT": session.virtualenv.location,
-            "UV_LINK_MODE": "copy",
-        },
-    )
     pytest_args = session.posargs if session.posargs else []
-    session.run("pytest", *pytest_args)
+    session.run(
+        "pytest",
+        "--cov=llmz",
+        "--cov-report=",
+        "tests/unit",
+        *pytest_args,
+        external=True,
+        env={"COVERAGE_FILE": ".coverage.unit"},
+    )
+
+
+@nox.session()
+def run_func_tests(session: nox.Session):
+    """Run functional tests."""
+    pytest_args = session.posargs if session.posargs else []
+    session.run(
+        "pytest",
+        "--cov=llmz",
+        "--cov-report=",
+        "tests/functional",
+        *pytest_args,
+        external=True,
+        env={"COVERAGE_FILE": ".coverage.func"},
+    )
+
+
+@nox.session(python=None)
+def compute_test_coverage(session: nox.Session):
+    """Compute test coverage after unit and functional tests."""
+    session.run(
+        "coverage", "combine", ".coverage.unit", ".coverage.func", external=True
+    )
+    session.run("coverage", "report", "--fail-under=95", external=True)
 
 
 @nox.session(python=None)
@@ -54,7 +78,7 @@ def test_docs_build(session: nox.Session):
     session.run("rm", "-rf", "docs_build", external=True)
 
 
-@nox.session(python=PYTHON, reuse_venv=True)
+@nox.session(reuse_venv=True)
 def build_and_deploy_docs(session: nox.Session):
     """Deploy docs to GitHub Pages."""
     session.run_install(

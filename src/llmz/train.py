@@ -155,7 +155,7 @@ def train(
                 log.info(f"{step=}, {epoch=}")
 
             if step % eval_freq_steps == 0:
-                evaluator.evaluate(step, model)
+                evaluator.evaluate(step, model, log)
 
 
 def autoregressive_llm_loss(

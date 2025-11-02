@@ -32,6 +32,12 @@ jobs:
     - name: Ensure docs build
       run: |
         uv run nox -s test_docs_build
-    - name: Run tests
+    - name: Run unit tests
       run: |
-        uv run nox -s run_tests-${{ matrix.python-version }}
+        uv run nox -s run_unit_tests
+    - name: Run functional tests
+      run: |
+        uv run nox -s run_func_tests
+    - name: Compute test coverage
+      run: |
+        uv run nox -s compute_test_coverage

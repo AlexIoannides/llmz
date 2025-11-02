@@ -177,6 +177,11 @@ class GPT2Tokenizer(_Tokenizer):
         """Initialise tokenizer."""
         self._tokenizer = tiktoken.get_encoding("gpt2")
 
+    @property
+    def vocab_size(self) -> int:
+        """Get vocabulary size."""
+        return self._tokenizer.n_vocab
+
     def text2tokens(self, text: str) -> list[int]:
         """Map a string to a list of tokens."""
         return self._tokenizer.encode(text)
