@@ -1,21 +1,21 @@
 """Utilities for working with LLMs."""
 
-
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, NamedTuple
 
 import torch
-from torch import nn
+from torch import nn, optim
 
 LOCAL_FS_PATH = Path.cwd() / ".llmz_ckpts"
 STATE_DICT_FILE_EXT = "pt"
+
 
 class Checkpoint(NamedTuple):
     """Container for checkpoints."""
 
     model: nn.Module
-    optimiser: nn.Module | None
+    optimiser: optim.Optimizer | None
     metadata: dict[str, Any]
 
 
@@ -23,11 +23,7 @@ class _CheckpointHandler(ABC):
     """Abstract interface for all checkpointing types."""
 
     @abstractmethod
-    def __init__(
-            self,
-            ckpt_base_name: str,
-            overwrite_existing: bool = False
-        ):
+    def __init__(self, ckpt_base_name: str, overwrite_existing: bool = False):
         """Initialise.
 
         Args:
@@ -40,12 +36,12 @@ class _CheckpointHandler(ABC):
 
     @abstractmethod
     def save_checkpoint(
-            self,
-            model: nn.Module,
-            optimiser: nn.Module | None,
-            step: int,
-            extra_metadata: dict[str, Any]
-        ) -> None:
+        self,
+        model: nn.Module,
+        optimiser: optim.Optimizer | None,
+        step: int,
+        extra_metadata: dict[str, Any],
+    ) -> None:
         """Save checkpoint to chosen location.
 
         Args:
@@ -60,11 +56,11 @@ class _CheckpointHandler(ABC):
 
     @abstractmethod
     def load_checkpoint(
-            self,
-            model: nn.Module,
-            optimiser: nn.Module | None,
-            step: int | None = None,
-        ) -> Checkpoint:
+        self,
+        model: nn.Module,
+        optimiser: optim.Optimizer | None,
+        step: int | None = None,
+    ) -> Checkpoint:
         """Load checkpoint.
 
         Args:
@@ -94,10 +90,10 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
     """Implementation of the Checkpointer interface for local FS persistence."""
 
     def __init__(
-            self,
-            ckpt_base_name: str,
-            overwrite_existing: bool = False,
-        ):
+        self,
+        ckpt_base_name: str,
+        overwrite_existing: bool = False,
+    ):
         """Initialise.
 
         Args:
@@ -111,12 +107,12 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
         self.overwrite_existing = overwrite_existing
 
     def save_checkpoint(
-            self,
-            model: nn.Module,
-            optimiser: nn.Module | None,
-            step: int,
-            extra_metadata: dict[str, Any]
-        ) -> None:
+        self,
+        model: nn.Module,
+        optimiser: optim.Optimizer | None,
+        step: int,
+        extra_metadata: dict[str, Any],
+    ) -> None:
         """Save checkpoint to chosen location.
 
         Args:
@@ -145,11 +141,11 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
             torch.save(state_dict, ckpt_path)
 
     def load_checkpoint(
-            self,
-            model: nn.Module,
-            optimiser: nn.Module | None,
-            step: int | None = None,
-        ) -> Checkpoint:
+        self,
+        model: nn.Module,
+        optimiser: optim.Optimizer | None,
+        step: int | None = None,
+    ) -> Checkpoint:
         """Load checkpoint.
 
         Args:
