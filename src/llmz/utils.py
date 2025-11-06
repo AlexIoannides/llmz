@@ -1,16 +1,15 @@
 """Utilities for working with LLMs."""
 
 
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Literal, NamedTuple
+from typing import Any, NamedTuple
 
 import torch
 from torch import nn
 
 LOCAL_FS_PATH = Path.cwd() / ".llmz_ckpts"
-
-CheckpointLocation = Literal["LocalFS"]
-
+STATE_DICT_FILE_EXT = "pt"
 
 class Checkpoint(NamedTuple):
     """Container for checkpoints."""
@@ -20,28 +19,26 @@ class Checkpoint(NamedTuple):
     metadata: dict[str, Any]
 
 
-class CheckpointHandler:
-    """Handle saving and loading checkpoint."""
+class _CheckpointHandler(ABC):
+    """Abstract interface for all checkpointing types."""
 
+    @abstractmethod
     def __init__(
             self,
             ckpt_base_name: str,
-            ckpt_location: CheckpointLocation = "LocalFS",
             overwrite_existing: bool = False
         ):
         """Initialise.
 
         Args:
             ckpt_base_name: Base name to give all checkpoint files.
-            ckpt_location: Location where checkpoint file are stored. Default to the
-                local filesystem.
             overwrite_existing: Whether to overwrite existing checkpoints. Defaults to
                 False.
 
         """
         self.ckpt_base_name = ckpt_base_name
-        self.ckpt_location = ckpt_location
 
+    @abstractmethod
     def save_checkpoint(
             self,
             model: nn.Module,
@@ -59,12 +56,9 @@ class CheckpointHandler:
                 with model and optimiser.
 
         """
-        match self.ckpt_location:
-            case "LocalFS":
-                pass
-            case _:
-                raise NotImplementedError
+        pass
 
+    @abstractmethod
     def load_checkpoint(
             self,
             model: nn.Module,
@@ -83,16 +77,102 @@ class CheckpointHandler:
             Model, optimiser (optional), and metadata checkpoint.
 
         """
-        match self.ckpt_location:
-            case "LocalFS":
-                state_dict = self._load_ckpt_local_fs("foo-1980")
-            case _:
-                raise NotImplementedError
+        pass
 
-        ckpt = Checkpoint(
-            state_dict["model"], state_dict.get("optimiser"), state_dict["metadata"]
-        )
-        return ckpt
+    @abstractmethod
+    def list_checkpoints(self) -> list[str]:
+        """Get list of all checkpoints with base name.
+
+        Returns:
+            List of all checkpoint associated with the base name.
+
+        """
+        pass
+
+
+class LocalFSCheckpointHandler(_CheckpointHandler):
+    """Implementation of the Checkpointer interface for local FS persistence."""
+
+    def __init__(
+            self,
+            ckpt_base_name: str,
+            overwrite_existing: bool = False,
+        ):
+        """Initialise.
+
+        Args:
+            ckpt_base_name: Base name to give all checkpoint files.
+            overwrite_existing: Whether to overwrite existing checkpoints. Defaults to
+                False.
+
+        """
+        self._ckpts_dir = LOCAL_FS_PATH / ckpt_base_name
+        self._ckpts_dir.mkdir(parents=True, exist_ok=True)
+        self.overwrite_existing = overwrite_existing
+
+    def save_checkpoint(
+            self,
+            model: nn.Module,
+            optimiser: nn.Module | None,
+            step: int,
+            extra_metadata: dict[str, Any]
+        ) -> None:
+        """Save checkpoint to chosen location.
+
+        Args:
+            model: The model with state dict to be persisted.
+            optimiser: The optimiser with state dict to be persisted (optional).
+            step: Training step that produced the model and optimiser.
+            extra_metadata: Dictionary of additional related information to be persisted
+                with model and optimiser.
+
+        Raises:
+            RuntimeError if the checkpoint exists and `overwrite_existing` has been set
+                to `False`
+
+        """
+        metadata = extra_metadata.copy()
+        state_dict = {
+            "model": model.state_dict(),
+            "optimiser": optimiser.state_dict() if optimiser else None,
+            "metadata": metadata,
+        }
+        ckpt_path = self._ckpts_dir / f"{step}.{STATE_DICT_FILE_EXT}"
+        if ckpt_path.exists() and not self.overwrite_existing:
+            msg = f"{ckpt_path} already exists and overwrite_existing=False"
+            raise RuntimeError(msg)
+        else:
+            torch.save(state_dict, ckpt_path)
+
+    def load_checkpoint(
+            self,
+            model: nn.Module,
+            optimiser: nn.Module | None,
+            step: int | None = None,
+        ) -> Checkpoint:
+        """Load checkpoint.
+
+        Args:
+            model: The model to load the model state dict into.
+            optimiser: The optimiser to load the model state dict into.
+            step: The step associated with the persisted checkpoint (optional). If none,
+                then the most recent will be returned automatically. Defaults to None.
+
+        Returns:
+            Model, optimiser (optional), and metadata checkpoint.
+
+        Raises:
+            FileExistsError if checkpoint file cannot be located on local FS.
+
+        """
+        ckpt_path = self._ckpts_dir / f"{step}.{STATE_DICT_FILE_EXT}"
+        if not ckpt_path.exists():
+            raise FileExistsError(f"cannot find checkpoint at {ckpt_path}")
+        state_dict = torch.load(ckpt_path, map_location="cpu")
+        model.load_state_dict(state_dict["model"], strict=True)
+        if optimiser:
+            optimiser.load_state_dict(state_dict["optimiser"], strict=True)
+        return Checkpoint(model, optimiser, state_dict["metadata"])
 
     def list_checkpoints(self) -> list[str]:
         """Get list of all checkpoints with base name.
@@ -101,43 +181,4 @@ class CheckpointHandler:
             List of all checkpoint associated with the base name.
 
         """
-        match self.ckpt_location:
-            case "LocalFS":
-                return self._list_ckpts_local_fs()
-            case _:
-                raise NotImplementedError
-
-    @staticmethod
-    def _save_ckpt_local_fs(state_dict: dict[str, Any], ckpt_name) -> None:
-        """Save checkpoint to local FS.
-
-        Args:
-            state_dict: State dict to persist to local FS.
-            ckpt_name: Full name of checkpoint.
-
-        """
-        pass
-
-
-    @staticmethod
-    def _load_ckpt_local_fs(ckpt_name) -> dict[str, Any]:
-        """Load checkpoint from local FS.
-
-        Args:
-            state_dict: State dict to persist to local FS.
-            ckpt_name: Full name of checkpoint.
-
-        Returns:
-            State dict for model, optimiser and metadata.
-
-        """
-        return {"foo": "bar"}
-
-    def _list_ckpts_local_fs(self) -> list[str]:
-        """Get list of checkpoint on local FS.
-
-        Returns:
-            List of all checkpoint associated with the base name on the local FS.
-
-        """
-        return [""]
+        return [str(ckpt) for ckpt in self._ckpts_dir.glob("*.{STATE_DICT_FILE_EXT}")]
