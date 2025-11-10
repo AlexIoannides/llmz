@@ -1,6 +1,7 @@
 """Utilities for working with LLMs."""
 
 from abc import ABC, abstractmethod
+from datetime import datetime
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -16,6 +17,8 @@ class Checkpoint(NamedTuple):
 
     model: nn.Module
     optimiser: optim.Optimizer | None
+    step: int
+    timestamp: str
     metadata: dict[str, Any]
 
 
@@ -127,11 +130,12 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
                 to `False`
 
         """
-        metadata = extra_metadata.copy()
         state_dict = {
             "model": model.state_dict(),
             "optimiser": optimiser.state_dict() if optimiser else None,
-            "metadata": metadata,
+            "step": step,
+            "timestamp": datetime.now().isoformat(timespec="seconds"),
+            "metadata": extra_metadata,
         }
         ckpt_path = self._ckpts_dir / f"{step}.{STATE_DICT_FILE_EXT}"
         if ckpt_path.exists() and not self.overwrite_existing:
@@ -167,14 +171,21 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
         state_dict = torch.load(ckpt_path, map_location="cpu")
         model.load_state_dict(state_dict["model"], strict=True)
         if optimiser:
-            optimiser.load_state_dict(state_dict["optimiser"], strict=True)
-        return Checkpoint(model, optimiser, state_dict["metadata"])
+            optimiser.load_state_dict(state_dict["optimiser"])
+        return Checkpoint(
+            model,
+            optimiser,
+            state_dict["step"],
+            state_dict["timestamp"],
+            state_dict["metadata"]
+        )
 
     def list_checkpoints(self) -> list[str]:
         """Get list of all checkpoints with base name.
 
         Returns:
-            List of all checkpoint associated with the base name.
+            List of all checkpoint associated with the base name in ascending order of
+                steps.
 
         """
         return [str(ckpt) for ckpt in self._ckpts_dir.glob("*.{STATE_DICT_FILE_EXT}")]

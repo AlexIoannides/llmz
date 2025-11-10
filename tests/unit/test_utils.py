@@ -1,5 +1,6 @@
 """Tests for utility functions."""
 
+import re
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -41,11 +42,15 @@ def test_LocalFSCheckpointHandler_saves_checkpoints(
     state_dict_0 = torch.load(files[0], weights_only=False)
     assert state_dict_0["model"]["weight"].size() == (10, 5)
     assert state_dict_0["optimiser"]["param_groups"][0]["lr"] == 0.001
+    assert state_dict_0["step"] == 1
+    assert re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$", state_dict_0["timestamp"])
     assert state_dict_0["metadata"]["foo"] == "bar"
 
     state_dict_1 = torch.load(files[1], weights_only=False)
     assert state_dict_1["model"]["weight"].size() == (10, 5)
     assert state_dict_1["optimiser"] is None
+    assert state_dict_1["step"] == 2
+    assert re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$", state_dict_1["timestamp"])
     assert state_dict_1["metadata"]["A"] == "B"
 
 
@@ -60,3 +65,45 @@ def test_LocalFSCheckpointHandler_saves_checkpoints_raises_on_prohibited_overwri
     expected_msg = "already exists and overwrite_existing=False"
     with pytest.raises(RuntimeError, match=expected_msg):
         checkpointer.save_checkpoint(model, optimiser, 1, metadata)
+
+
+def test_LocalFSCheckpointHandler_loads_checkpoints(
+    tmp_path: Path, model_optim_meta: tuple[nn.Module, optim.Optimizer, dict[str, Any]]
+):
+    ckpt_base_name = "llmz"
+    ckpt_dir = tmp_path / ckpt_base_name
+    ckpt_dir.mkdir(exist_ok=True)
+
+    model, optimiser, metadata = model_optim_meta
+    state_dict = {
+        "model": model.state_dict(),
+        "optimiser": optimiser.state_dict(),
+        "metadata": metadata,
+    }
+
+    state_dict["step"] = 1000
+    state_dict["timestamp"] = "foo"
+    ckpt_file_1 = ckpt_dir / f"1000.{STATE_DICT_FILE_EXT}"
+    torch.save(state_dict, ckpt_file_1)
+
+    state_dict["step"] = 2000
+    state_dict["timestamp"] = "bar"
+    ckpt_file_2 = ckpt_dir / f"2000.{STATE_DICT_FILE_EXT}"
+    torch.save(state_dict, ckpt_file_2)
+
+    # change model and optimiser state after persistence
+    torch.nn.init.zeros_(model.weight)
+    optimiser.param_groups[0]["lr"] == 0.0
+
+    with patch("llmz.utils.LOCAL_FS_PATH", tmp_path):
+        checkpointer = LocalFSCheckpointHandler(ckpt_base_name)
+
+    ckpt = checkpointer.load_checkpoint(model, optimiser, 1000)
+    assert ckpt.model.weight.sum() != 0.0
+    assert optimiser.param_groups[0]["lr"] != 0
+    assert ckpt.step == 1000
+
+    ckpt = checkpointer.load_checkpoint(model, optimiser, 2000)
+    assert ckpt.model.weight.sum() != 0.0
+    assert optimiser.param_groups[0]["lr"] != 0
+    assert ckpt.step == 2000
