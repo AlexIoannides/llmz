@@ -1,5 +1,6 @@
 # API Reference
 
+::: llmz.checkpointing
 ::: llmz.components.attention
 ::: llmz.components.normalisation
 ::: llmz.components.activations
