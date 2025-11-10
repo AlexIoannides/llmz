@@ -107,3 +107,36 @@ def test_LocalFSCheckpointHandler_loads_checkpoints(
     assert ckpt.model.weight.sum() != 0.0
     assert optimiser.param_groups[0]["lr"] != 0
     assert ckpt.step == 2000
+
+
+def test_LocalFSCheckpointHandler_lists_checkpoints(
+    tmp_path: Path, model_optim_meta: tuple[nn.Module, optim.Optimizer, dict[str, Any]]
+):
+    ckpt_base_name = "llmz"
+    ckpt_dir = tmp_path / ckpt_base_name
+    ckpt_dir.mkdir(exist_ok=True)
+
+    model, optimiser, metadata = model_optim_meta
+    state_dict = {
+        "model": model.state_dict(),
+        "optimiser": optimiser.state_dict(),
+        "metadata": metadata,
+    }
+
+    state_dict["step"] = 2000
+    state_dict["timestamp"] = "bar"
+    ckpt_file_2 = ckpt_dir / f"2000.{STATE_DICT_FILE_EXT}"
+    torch.save(state_dict, ckpt_file_2)
+
+    state_dict["step"] = 1000
+    state_dict["timestamp"] = "foo"
+    ckpt_file_1 = ckpt_dir / f"1000.{STATE_DICT_FILE_EXT}"
+    torch.save(state_dict, ckpt_file_1)
+
+    with patch("llmz.utils.LOCAL_FS_PATH", tmp_path):
+        checkpointer = LocalFSCheckpointHandler(ckpt_base_name)
+
+    assert checkpointer.list_checkpoints() == [
+        f"1000.{STATE_DICT_FILE_EXT}",
+        f"2000.{STATE_DICT_FILE_EXT}",
+    ]

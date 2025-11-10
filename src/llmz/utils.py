@@ -188,4 +188,7 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
                 steps.
 
         """
-        return [str(ckpt) for ckpt in self._ckpts_dir.glob("*.{STATE_DICT_FILE_EXT}")]
+        ckpts = [
+            str(ckpt.name) for ckpt in self._ckpts_dir.glob(f"*.{STATE_DICT_FILE_EXT}")
+        ]
+        return sorted(ckpts)
