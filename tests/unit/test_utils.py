@@ -123,7 +123,10 @@ def test_LocalFSCheckpointHandler_loads_checkpoints_raises_errors_on_missing_fil
     with patch("llmz.utils.LOCAL_FS_PATH", tmp_path):
         checkpointer = LocalFSCheckpointHandler(ckpt_base_name)
 
-    with pytest.raises(FileExistsError, match="cannot find checkpoint at"):
+    with (
+        patch.object(checkpointer, "list_checkpoints", return_value=[]),
+        pytest.raises(FileExistsError, match="cannot find checkpoint at"),
+    ):
         checkpointer.load_checkpoint(model, optimiser, None)
 
     with pytest.raises(FileExistsError, match="cannot find checkpoint at"):

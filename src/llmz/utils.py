@@ -183,7 +183,7 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
             optimiser,
             state_dict["step"],
             state_dict["timestamp"],
-            state_dict["metadata"]
+            state_dict["metadata"],
         )
 
     def list_checkpoints(self) -> list[str]:
