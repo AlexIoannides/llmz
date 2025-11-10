@@ -1,4 +1,4 @@
-"""Tests for utility functions."""
+"""Tests for checkpoint handlers."""
 
 import re
 from pathlib import Path
@@ -9,7 +9,7 @@ import pytest
 import torch
 from torch import nn, optim
 
-from llmz.utils import STATE_DICT_FILE_EXT, LocalFSCheckpointHandler
+from llmz.checkpointing import STATE_DICT_FILE_EXT, LocalFSCheckpointHandler
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ def model_optim_meta() -> tuple[nn.Module, optim.Optimizer, dict[str, Any]]:
 
 def test_LocalFSCheckpointHandler_creates_ckpt_dir(tmp_path: Path):
     ckpt_base_name = "llmz"
-    with patch("llmz.utils.LOCAL_FS_PATH", tmp_path):
+    with patch("llmz.checkpointing.LOCAL_FS_PATH", tmp_path):
         LocalFSCheckpointHandler(ckpt_base_name)
     assert (tmp_path / ckpt_base_name).exists()
 
@@ -30,7 +30,7 @@ def test_LocalFSCheckpointHandler_saves_checkpoints(
     tmp_path: Path, model_optim_meta: tuple[nn.Module, optim.Optimizer, dict[str, Any]]
 ):
     ckpt_base_name = "llmz"
-    with patch("llmz.utils.LOCAL_FS_PATH", tmp_path):
+    with patch("llmz.checkpointing.LOCAL_FS_PATH", tmp_path):
         checkpointer = LocalFSCheckpointHandler(ckpt_base_name)
     model, optimiser, metadata = model_optim_meta
     checkpointer.save_checkpoint(model, optimiser, 1, metadata)
@@ -58,7 +58,7 @@ def test_LocalFSCheckpointHandler_saves_checkpoints_raises_on_prohibited_overwri
     tmp_path: Path, model_optim_meta: tuple[nn.Module, optim.Optimizer, dict[str, Any]]
 ):
     ckpt_base_name = "llmz"
-    with patch("llmz.utils.LOCAL_FS_PATH", tmp_path):
+    with patch("llmz.checkpointing.LOCAL_FS_PATH", tmp_path):
         checkpointer = LocalFSCheckpointHandler(ckpt_base_name)
     model, optimiser, metadata = model_optim_meta
     checkpointer.save_checkpoint(model, optimiser, 1, metadata)
@@ -95,7 +95,7 @@ def test_LocalFSCheckpointHandler_loads_checkpoints(
     torch.nn.init.zeros_(model.weight)
     optimiser.param_groups[0]["lr"] == 0.0
 
-    with patch("llmz.utils.LOCAL_FS_PATH", tmp_path):
+    with patch("llmz.checkpointing.LOCAL_FS_PATH", tmp_path):
         checkpointer = LocalFSCheckpointHandler(ckpt_base_name)
 
     ckpt = checkpointer.load_checkpoint(model, optimiser, 1000)
@@ -120,7 +120,7 @@ def test_LocalFSCheckpointHandler_loads_checkpoints_raises_errors_on_missing_fil
     ckpt_dir.mkdir(exist_ok=True)
 
     model, optimiser, _ = model_optim_meta
-    with patch("llmz.utils.LOCAL_FS_PATH", tmp_path):
+    with patch("llmz.checkpointing.LOCAL_FS_PATH", tmp_path):
         checkpointer = LocalFSCheckpointHandler(ckpt_base_name)
 
     with (
@@ -157,7 +157,7 @@ def test_LocalFSCheckpointHandler_lists_checkpoints(
     ckpt_file_1 = ckpt_dir / f"1000.{STATE_DICT_FILE_EXT}"
     torch.save(state_dict, ckpt_file_1)
 
-    with patch("llmz.utils.LOCAL_FS_PATH", tmp_path):
+    with patch("llmz.checkpointing.LOCAL_FS_PATH", tmp_path):
         checkpointer = LocalFSCheckpointHandler(ckpt_base_name)
 
     assert checkpointer.list_checkpoints() == [
