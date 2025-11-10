@@ -19,7 +19,7 @@ class Checkpoint(NamedTuple):
     optimiser: optim.Optimizer | None
     step: int
     timestamp: str
-    metadata: dict[str, Any]
+    metadata: dict[str, Any] | None
 
 
 class _CheckpointHandler(ABC):
@@ -114,7 +114,7 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
         model: nn.Module,
         optimiser: optim.Optimizer | None,
         step: int,
-        extra_metadata: dict[str, Any],
+        extra_metadata: dict[str, Any] | None = None,
     ) -> None:
         """Save checkpoint to chosen location.
 
@@ -123,7 +123,7 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
             optimiser: The optimiser with state dict to be persisted (optional).
             step: Training step that produced the model and optimiser.
             extra_metadata: Dictionary of additional related information to be persisted
-                with model and optimiser.
+                with model and optimiser. Defaults to None.
 
         Raises:
             RuntimeError if the checkpoint exists and `overwrite_existing` has been set
@@ -155,7 +155,7 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
         Args:
             model: The model to load the model state dict into.
             optimiser: The optimiser to load the model state dict into.
-            step: The step associated with the persisted checkpoint (optional). If none,
+            step: The step associated with the persisted checkpoint (optional). If None,
                 then the most recent will be returned automatically. Defaults to None.
 
         Returns:
@@ -165,7 +165,13 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
             FileExistsError if checkpoint file cannot be located on local FS.
 
         """
-        ckpt_path = self._ckpts_dir / f"{step}.{STATE_DICT_FILE_EXT}"
+        if step:
+            ckpt_path = self._ckpts_dir / f"{step}.{STATE_DICT_FILE_EXT}"
+        elif ckpts := self.list_checkpoints():
+            ckpt_path = self._ckpts_dir / ckpts[-1]
+        else:
+            raise FileExistsError(f"cannot find checkpoint at {self._ckpts_dir}")
+
         if not ckpt_path.exists():
             raise FileExistsError(f"cannot find checkpoint at {ckpt_path}")
         state_dict = torch.load(ckpt_path, map_location="cpu")

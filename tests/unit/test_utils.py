@@ -108,6 +108,27 @@ def test_LocalFSCheckpointHandler_loads_checkpoints(
     assert optimiser.param_groups[0]["lr"] != 0
     assert ckpt.step == 2000
 
+    ckpt = checkpointer.load_checkpoint(model, optimiser, None)
+    assert ckpt.step == 2000
+
+
+def test_LocalFSCheckpointHandler_loads_checkpoints_raises_errors_on_missing_files(
+    tmp_path: Path, model_optim_meta: tuple[nn.Module, optim.Optimizer, dict[str, Any]]
+):
+    ckpt_base_name = "llmz"
+    ckpt_dir = tmp_path / ckpt_base_name
+    ckpt_dir.mkdir(exist_ok=True)
+
+    model, optimiser, _ = model_optim_meta
+    with patch("llmz.utils.LOCAL_FS_PATH", tmp_path):
+        checkpointer = LocalFSCheckpointHandler(ckpt_base_name)
+
+    with pytest.raises(FileExistsError, match="cannot find checkpoint at"):
+        checkpointer.load_checkpoint(model, optimiser, None)
+
+    with pytest.raises(FileExistsError, match="cannot find checkpoint at"):
+        checkpointer.load_checkpoint(model, optimiser, 1000)
+
 
 def test_LocalFSCheckpointHandler_lists_checkpoints(
     tmp_path: Path, model_optim_meta: tuple[nn.Module, optim.Optimizer, dict[str, Any]]
