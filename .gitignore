@@ -1,6 +1,7 @@
 # Misc
 TODO.md
 .vscode/
+.llmz*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
