@@ -35,7 +35,7 @@ class _CheckpointHandler(ABC):
                 False.
 
         """
-        self.ckpt_base_name = ckpt_base_name
+        pass
 
     @abstractmethod
     def save_checkpoint(
