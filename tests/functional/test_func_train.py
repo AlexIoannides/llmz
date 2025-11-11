@@ -9,7 +9,7 @@ import pytest
 import torch
 from torch.optim import AdamW
 
-from llmz.checkpointing import LOCAL_FS_PATH, LocalFSCheckpointHandler
+from llmz.checkpoint_handlers import LOCAL_FS_PATH, LocalFSCheckpointHandler
 from llmz.datasets import GPT2SmallTextDataset
 from llmz.evaluate import Evaluator, basic_llm_metrics
 from llmz.generate import generate

@@ -9,7 +9,7 @@ import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
 
-from llmz.checkpointing import _CheckpointHandler
+from llmz.checkpoint_handlers import _CheckpointHandler
 from llmz.evaluate import Evaluator
 
 logging.basicConfig(
