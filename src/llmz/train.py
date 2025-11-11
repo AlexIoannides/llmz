@@ -9,6 +9,7 @@ import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
 
+from llmz.checkpoint_handlers import _CheckpointHandler
 from llmz.evaluate import Evaluator
 
 logging.basicConfig(
@@ -103,8 +104,9 @@ def train(
     lr_schedule: Callable[[int], float] | optim.lr_scheduler.LRScheduler,
     train_dataloader: DataLoader,
     train_epochs: int,
-    eval_freq_steps: int,
     evaluator: Evaluator,
+    eval_ckpt_freq_steps: int,
+    ckpt_handler: _CheckpointHandler | None = None,
     model_backward_callbacks: list[Callable[[nn.Module], None]] | None = None,
     log_freq_steps: int = 100,
     device: torch.device = torch.device("cpu"),
@@ -115,11 +117,14 @@ def train(
         model: The PyTorch model to train.
         loss_calc: Function that calculates and returns loss for model and batch.
         optimiser: The optimizer for updating model parameters.
-        lr_schedule: Function to compute learning rate for training step.
+        lr_schedule: Function to compute learning rate for training step.æ
         train_dataloader: DataLoader for training data.
         train_epochs: Number of training epochs.
-        eval_freq_steps: Number of steps between evaluations.
         evaluator: A handler for all model evaluations.
+        eval_ckpt_freq_steps: Number of steps between evaluations and checkpoint
+            persistence.
+        ckpt_handler: Optional checkpoint handler for persisting checkpoints after
+            evaluations have been computed. Defaults to None.
         model_backward_callbacks: Optional callbacks for model after backward pass.
         log_freq_steps: Number of steps between basic progress logging to stdout.
             Defaults to 100.
@@ -154,8 +159,12 @@ def train(
             if step % log_freq_steps == 0:
                 log.info(f"{step=}, {epoch=}")
 
-            if step % eval_freq_steps == 0:
+            if step % eval_ckpt_freq_steps == 0:
                 evaluator.evaluate(step, model, log)
+                if ckpt_handler:
+                    ckpt_handler.save_checkpoint(
+                        model, optimiser, step, {"evals": evaluator[-1].results}
+                    )
 
 
 def autoregressive_llm_loss(
