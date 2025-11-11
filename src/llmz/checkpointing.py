@@ -19,7 +19,7 @@ class Checkpoint(NamedTuple):
     optimiser: optim.Optimizer | None
     step: int
     timestamp: str
-    metadata: dict[str, Any] | None
+    metadata: dict[str, Any]
 
 
 class _CheckpointHandler(ABC):
@@ -197,4 +197,4 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
         ckpts = [
             str(ckpt.name) for ckpt in self._ckpts_dir.glob(f"*.{STATE_DICT_FILE_EXT}")
         ]
-        return sorted(ckpts)
+        return sorted(ckpts, key=lambda e: int(e.split(".")[0]))
