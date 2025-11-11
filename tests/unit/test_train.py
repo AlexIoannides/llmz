@@ -102,7 +102,7 @@ def test_train_runs_all_steps_end_to_end(
             train_dataloader=dataloader,
             train_epochs=epochs,
             model_backward_callbacks=[mock_callback, mock_callback],
-            eval_freq_steps=eval_freq,
+            eval_ckpt_freq_steps=eval_freq,
             evaluator=mock_evaluator,
             log_freq_steps=log_freq,
         )
@@ -131,7 +131,7 @@ def test_train_runs_all_steps_end_to_end(
             train_dataloader=dataloader,
             train_epochs=epochs,
             model_backward_callbacks=None,
-            eval_freq_steps=eval_freq,
+            eval_ckpt_freq_steps=eval_freq,
             evaluator=mock_evaluator,
             log_freq_steps=log_freq,
         )
