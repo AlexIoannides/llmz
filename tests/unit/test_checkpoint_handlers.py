@@ -127,7 +127,37 @@ def test_LocalFSCheckpointHandler_loads_checkpoints(
     assert ckpt.step == 2000
 
 
-def test_LocalFSCheckpointHandler_loads_checkpoints_raises_errors_on_missing_files(
+def test_LocalFSCheckpointHandler_loads_checkpoints_raises_error_on_missing_state_dicts(
+    tmp_path: Path, model_optim_lrs_meta: TrainingLoopObjects
+):
+    ckpt_base_name = "llmz"
+    ckpt_dir = tmp_path / ckpt_base_name
+    ckpt_dir.mkdir(exist_ok=True)
+
+    model, optimiser, lr_schedule, metadata = model_optim_lrs_meta
+
+    state_dict = {
+        "model": model.state_dict(),
+        "optimiser": None,
+        "lr_schedule": None,
+        "step": 1000,
+        "timestamp": "foo",
+        "metadata": metadata,
+    }
+    ckpt_file = ckpt_dir / f"1000.{STATE_DICT_FILE_EXT}"
+    torch.save(state_dict, ckpt_file)
+
+    with patch("llmz.checkpoint_handlers.LOCAL_FS_PATH", tmp_path):
+        checkpointer = LocalFSCheckpointHandler(ckpt_base_name)
+
+    with pytest.raises(RuntimeError, match="no optimiser in checkpoint"):
+        checkpointer.load_checkpoint(model, optimiser, None)
+
+    with pytest.raises(RuntimeError, match="no LR schedule in checkpoint"):
+        checkpointer.load_checkpoint(model, None, lr_schedule)
+
+
+def test_LocalFSCheckpointHandler_loads_checkpoints_raises_error_on_missing_files(
     tmp_path: Path, model_optim_lrs_meta: TrainingLoopObjects
 ):
     ckpt_base_name = "llmz"
