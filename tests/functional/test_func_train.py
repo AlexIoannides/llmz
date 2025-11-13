@@ -107,6 +107,11 @@ def test_GPT2_train_end_to_end(text_data_file: Path):
     ckpts = list(ckpt_dir.glob("*.pt"))
     assert len(ckpts) == 10
 
-    last_ckpt = checkpointer.load_checkpoint(model, optim)
+    last_ckpt = checkpointer.load_checkpoint(
+        model,
+        optim,
+        torch.optim.lr_scheduler.LambdaLR(optim, lr_schedule),
+    )
     assert last_ckpt.step == total_epochs * steps_per_epoch
+    assert last_ckpt.metadata is not None
     assert last_ckpt.metadata["evals"]["train_loss"] == train_loss_end

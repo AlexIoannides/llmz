@@ -189,6 +189,8 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
 
         Raises:
             FileExistsError if checkpoint file cannot be located on local FS.
+            RuntimeError if optimiser or lr_schedule are specified by there exists no
+                state dict for them in the checkpoint.
 
         """
         if step:
@@ -212,7 +214,7 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
             if state_dict["lr_schedule"]:
                 lr_schedule.load_state_dict(state_dict["lr_schedule"])
             else:
-                raise RuntimeError("no lr_schedule in checkpoint")
+                raise RuntimeError("no LR schedule in checkpoint")
 
         return Checkpoint(
             model,

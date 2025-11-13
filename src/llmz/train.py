@@ -163,7 +163,11 @@ def train(
                 evaluator.evaluate(step, model, log)
                 if ckpt_handler:
                     ckpt_handler.save_checkpoint(
-                        model, optimiser, step, {"evals": evaluator[-1].results}
+                        model,
+                        optimiser,
+                        lr_schedule,
+                        step,
+                        {"evals": evaluator[-1].results},
                     )
 
 
