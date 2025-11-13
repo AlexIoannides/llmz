@@ -3,10 +3,11 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, TypedDict
 
 import torch
 from torch import nn, optim
+from torch.optim import lr_scheduler
 
 LOCAL_FS_PATH = Path.cwd() / ".llmz_ckpts"
 STATE_DICT_FILE_EXT = "pt"
@@ -17,9 +18,21 @@ class Checkpoint(NamedTuple):
 
     model: nn.Module
     optimiser: optim.Optimizer | None
+    lr_schedule: lr_scheduler.LRScheduler | None
     step: int
     timestamp: str
-    metadata: dict[str, Any]
+    metadata: dict[str, Any] | None
+
+
+class TrainingStateDict(TypedDict):
+    """Checkpoint state dictionaries."""
+
+    model: dict[str, Any]
+    optimiser: dict[str, Any] | None
+    lr_schedule: dict[str, Any] | None
+    step: int
+    timestamp: str
+    metadata: dict[str, Any] | None
 
 
 class _CheckpointHandler(ABC):
@@ -42,6 +55,7 @@ class _CheckpointHandler(ABC):
         self,
         model: nn.Module,
         optimiser: optim.Optimizer | None,
+        lr_schedule: lr_scheduler.LRScheduler | None,
         step: int,
         extra_metadata: dict[str, Any],
     ) -> None:
@@ -50,6 +64,8 @@ class _CheckpointHandler(ABC):
         Args:
             model: The model with state dict to be persisted.
             optimiser: The optimiser with state dict to be persisted (optional).
+            lr_schedule: The learning rate scheduler state dict to be persisted
+                (optional).
             step: Training step that produced the model and optimiser.
             extra_metadata: Dictionary of additional related information to be persisted
                 with model and optimiser.
@@ -62,13 +78,16 @@ class _CheckpointHandler(ABC):
         self,
         model: nn.Module,
         optimiser: optim.Optimizer | None,
+        lr_schedule: lr_scheduler.LRScheduler | None,
         step: int | None = None,
     ) -> Checkpoint:
         """Load checkpoint.
 
         Args:
             model: The model to load the model state dict into.
-            optimiser: The optimiser to load the model state dict into.
+            optimiser: The optimiser to load the optimiser state dict into.
+            lr_schedule: The learning rate scheduler to load the learning rate
+                scheduler state dict into.
             step: The step associated with the persisted checkpoint (optional). If none,
                 then the most recent will be returned automatically. Defaults to None.
 
@@ -113,6 +132,7 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
         self,
         model: nn.Module,
         optimiser: optim.Optimizer | None,
+        lr_schedule: lr_scheduler.LRScheduler | None,
         step: int,
         extra_metadata: dict[str, Any] | None = None,
     ) -> None:
@@ -121,6 +141,8 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
         Args:
             model: The model with state dict to be persisted.
             optimiser: The optimiser with state dict to be persisted (optional).
+            lr_schedule: The learning rate scheduler state dict to be persisted
+                (optional).
             step: Training step that produced the model and optimiser.
             extra_metadata: Dictionary of additional related information to be persisted
                 with model and optimiser. Defaults to None.
@@ -130,9 +152,10 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
                 to `False`
 
         """
-        state_dict = {
+        state_dict: TrainingStateDict = {
             "model": model.state_dict(),
             "optimiser": optimiser.state_dict() if optimiser else None,
+            "lr_schedule": lr_schedule.state_dict() if lr_schedule else None,
             "step": step,
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "metadata": extra_metadata,
@@ -148,6 +171,7 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
         self,
         model: nn.Module,
         optimiser: optim.Optimizer | None,
+        lr_schedule: lr_scheduler.LRScheduler | None,
         step: int | None = None,
     ) -> Checkpoint:
         """Load checkpoint.
@@ -155,6 +179,8 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
         Args:
             model: The model to load the model state dict into.
             optimiser: The optimiser to load the model state dict into.
+            lr_schedule: The learning rate scheduler to load the learning rate
+                scheduler state dict into.
             step: The step associated with the persisted checkpoint (optional). If None,
                 then the most recent will be returned automatically. Defaults to None.
 
@@ -174,13 +200,24 @@ class LocalFSCheckpointHandler(_CheckpointHandler):
 
         if not ckpt_path.exists():
             raise FileExistsError(f"cannot find checkpoint at {ckpt_path}")
-        state_dict = torch.load(ckpt_path, map_location="cpu")
+        state_dict: TrainingStateDict = torch.load(ckpt_path, map_location="cpu")
         model.load_state_dict(state_dict["model"], strict=True)
+
         if optimiser:
-            optimiser.load_state_dict(state_dict["optimiser"])
+            if state_dict["optimiser"]:
+                optimiser.load_state_dict(state_dict["optimiser"])
+            else:
+                raise RuntimeError("no optimiser in checkpoint")
+        if lr_schedule:
+            if state_dict["lr_schedule"]:
+                lr_schedule.load_state_dict(state_dict["lr_schedule"])
+            else:
+                raise RuntimeError("no lr_schedule in checkpoint")
+
         return Checkpoint(
             model,
             optimiser,
+            lr_schedule,
             state_dict["step"],
             state_dict["timestamp"],
             state_dict["metadata"],
