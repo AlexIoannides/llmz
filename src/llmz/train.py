@@ -7,6 +7,7 @@ from collections.abc import Callable
 
 import torch
 from torch import nn, optim
+from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
 
 from llmz.checkpoint_handlers import _CheckpointHandler
@@ -101,7 +102,7 @@ def train(
     model: nn.Module,
     loss_calc: Callable[[nn.Module, torch.Tensor, torch.Tensor], torch.Tensor],
     optimiser: optim.Optimizer,
-    lr_schedule: Callable[[int], float] | optim.lr_scheduler.LRScheduler,
+    lr_schedule: Callable[[int], float] | lr_scheduler.LRScheduler,
     train_dataloader: DataLoader,
     train_epochs: int,
     evaluator: Evaluator,
@@ -131,8 +132,8 @@ def train(
         device: The processor to use for training. Defaults to CPU.
 
     """
-    if not isinstance(lr_schedule, optim.lr_scheduler.LRScheduler):
-        lr_schedule = optim.lr_scheduler.LambdaLR(optimiser, lr_schedule)
+    if not isinstance(lr_schedule, lr_scheduler.LRScheduler):
+        lr_schedule = lr_scheduler.LambdaLR(optimiser, lr_schedule)
 
     model = model.to(device)
     step = 0
