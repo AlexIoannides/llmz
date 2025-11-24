@@ -15,6 +15,7 @@ from llmz.evaluate import Evaluator
 from llmz.train import (
     GradientClipCallback,
     LinearWarmupCosineAnnealingLRSchedule,
+    TrainLoopManager,
     autoregressive_llm_loss,
     train,
 )
@@ -70,6 +71,16 @@ def test_GradientClipCallback(model: nn.Module, dataloader: DataLoader):
     )
 
     assert max_grad_before_clip > max_grad_after_clip
+
+
+def test_TrainingLoopManager_generates_epochs_and_steps():
+    loop_manager = TrainLoopManager(epochs=3, steps_per_epoch=2, start_from_step=1)
+    epoch_steps = [e for e in loop_manager]
+    assert epoch_steps == [(1, 1), (1, 2), (2, 3), (2, 4)]
+
+    loop_manager = TrainLoopManager(epochs=3, steps_per_epoch=2, start_from_step=3)
+    epoch_steps = [e for e in loop_manager]
+    assert epoch_steps == [(2, 3), (2, 4)]
 
 
 def test_train_runs_all_steps_end_to_end(

@@ -105,7 +105,7 @@ class TrainLoopManager:
             self,
             epochs: int,
             steps_per_epoch: int,
-            start_from_step: int = 0
+            start_from_step: int = 1
         ):
         """Initialise."""
         if start_from_step < 1:  # TODO other validations
@@ -127,13 +127,11 @@ class TrainLoopManager:
         ) -> Generator[tuple[int, int]]:
         """TODO."""
         total_steps = epochs * steps_per_epoch
-        num_remaining_steps = total_steps - (current_step - 1)
+        num_remaining_steps_ex_current = total_steps - current_step
 
-        # SEE HERE
-        num_whole_epochs_remaining = num_remaining_steps // steps_per_epoch
-        current_epoch = (epochs - num_whole_epochs_remaining) + 1
-
-        steps_left_in_current_epoch = num_remaining_steps % steps_per_epoch
+        steps_left_in_current_epoch = num_remaining_steps_ex_current % steps_per_epoch
+        num_whole_epochs_remaining = num_remaining_steps_ex_current // steps_per_epoch
+        current_epoch = (epochs - num_whole_epochs_remaining)
 
         if steps_left_in_current_epoch > 0:
             for _ in range(steps_per_epoch):
