@@ -3,7 +3,7 @@
 import logging
 import math
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 
 import torch
 from torch import nn, optim
@@ -96,6 +96,55 @@ class GradientClipCallback:
     def __call__(self, model: nn.Module) -> None:
         """Clip model gradients."""
         nn.utils.clip_grad_norm_(model.parameters(), max_norm=self.clip_grad_norm)
+
+
+class TrainLoopManager:
+    """TODO."""
+
+    def __init__(
+            self,
+            epochs: int,
+            steps_per_epoch: int,
+            start_from_step: int = 0
+        ):
+        """Initialise."""
+        if start_from_step < 1:  # TODO other validations
+            raise ValueError("start_from_step must be >= 1")
+
+        self._epoch_step_generator = self._build_epoch_step_generator(
+            epochs, steps_per_epoch, start_from_step
+        )
+
+    def __iter__(self) -> "TrainLoopManager":
+        return self
+
+    def __next__(self) -> tuple[int, int]:
+        return next(self._epoch_step_generator)
+
+    @staticmethod
+    def _build_epoch_step_generator(
+            epochs: int, steps_per_epoch: int, current_step: int
+        ) -> Generator[tuple[int, int]]:
+        """TODO."""
+        total_steps = epochs * steps_per_epoch
+        num_remaining_steps = total_steps - (current_step - 1)
+
+        # SEE HERE
+        num_whole_epochs_remaining = num_remaining_steps // steps_per_epoch
+        current_epoch = (epochs - num_whole_epochs_remaining) + 1
+
+        steps_left_in_current_epoch = num_remaining_steps % steps_per_epoch
+
+        if steps_left_in_current_epoch > 0:
+            for _ in range(steps_per_epoch):
+                yield (current_epoch, current_step)
+                current_step += 1
+            current_epoch += 1
+
+        for epoch in range(current_epoch, epochs):
+            for _ in range(steps_per_epoch):
+                yield (epoch, current_step)
+                current_step += 1
 
 
 def train(
