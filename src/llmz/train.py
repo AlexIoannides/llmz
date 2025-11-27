@@ -4,6 +4,7 @@ import logging
 import math
 import sys
 from collections.abc import Callable, Generator
+from typing import Any
 
 import torch
 from torch import nn, optim
@@ -99,7 +100,7 @@ class GradientClipCallback:
 
 
 class TrainLoopManager:
-    """TODO."""
+    """Manage epoch and step iteration."""
 
     def __init__(
             self,
@@ -107,10 +108,32 @@ class TrainLoopManager:
             steps_per_epoch: int,
             start_from_step: int = 1
         ):
-        """Initialise."""
-        if start_from_step < 1:  # TODO other validations
-            raise ValueError("start_from_step must be >= 1")
+        """Initialise.
 
+        Args:
+            epochs: Total number of desired epochs in training run.
+            steps_per_epoch (_type_): The number of steps in an epoch.
+            start_from_step: Which step to start from. This will be 1 if training hasn't
+                started and > 1 if training is being resumed.
+
+        Raises:
+            ValueError if any of epochs, steps_per_epoch or start_from_step is <= 0.
+
+        """
+        invalid_args = [
+            arg[0]
+            for arg in [
+                ("epochs", epochs),
+                ("steps_per_epoch", steps_per_epoch),
+                ("start_from_step", start_from_step)
+            ]
+            if arg[1] <= 0]
+        if invalid_args:
+            ex = ValueError("invalid inputs:")
+            for arg in invalid_args:
+                ex.add_note(f"{arg}")
+            raise ex
+ 
         self._epoch_step_generator = self._build_epoch_step_generator(
             epochs, steps_per_epoch, start_from_step
         )
@@ -125,7 +148,18 @@ class TrainLoopManager:
     def _build_epoch_step_generator(
             epochs: int, steps_per_epoch: int, current_step: int
         ) -> Generator[tuple[int, int]]:
-        """TODO."""
+        """Build epoch and stp generator.
+
+        Args:
+            epochs: Total number of desired epochs in training run.
+            steps_per_epoch (_type_): The number of steps in an epoch.
+            current_step: Which step to start from. This will be 1 if training hasn't
+                started and > 1 if training is being resumed.
+
+        Yields:
+            A tuple with the current epoch and step for the iteration.
+
+        """
         total_steps = epochs * steps_per_epoch
         num_remaining_steps_ex_current = total_steps - current_step
 
@@ -159,7 +193,7 @@ def train(
     log_freq_steps: int = 100,
     device: torch.device = torch.device("cpu"),
 ) -> None:
-    """Trains model.
+    """Train model.
 
     Args:
         model: The PyTorch model to train.
