@@ -1,10 +1,11 @@
 """Functions for training LLMs."""
 
+import itertools
 import logging
 import math
 import sys
 from collections.abc import Callable, Generator
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import torch
 from torch import nn, optim
@@ -102,21 +103,16 @@ class GradientClipCallback:
 class TrainStep(NamedTuple):
     """Container class for training step inputs."""
 
-    x: torch.Tensor
-    y: torch.Tensor
     epoch: int
     step: int
+    x: torch.Tensor
+    y: torch.Tensor
 
 
 class TrainLoopManager:
     """Manage epoch and step iteration."""
 
-    def __init__(
-            self,
-            epochs: int,
-            steps_per_epoch: int,
-            start_from_step: int = 1
-        ):
+    def __init__(self, epochs: int, steps_per_epoch: int, start_from_step: int = 1):
         """Initialise.
 
         Args:
@@ -134,15 +130,16 @@ class TrainLoopManager:
             for arg in [
                 ("epochs", epochs),
                 ("steps_per_epoch", steps_per_epoch),
-                ("start_from_step", start_from_step)
+                ("start_from_step", start_from_step),
             ]
-            if arg[1] <= 0]
+            if arg[1] <= 0
+        ]
         if invalid_args:
             ex = ValueError("invalid inputs:")
             for arg in invalid_args:
                 ex.add_note(f" * {arg}<=0")
             raise ex
- 
+
         self._epoch_step_generator = self._build_epoch_step_generator(
             epochs, steps_per_epoch, start_from_step
         )
@@ -153,10 +150,33 @@ class TrainLoopManager:
     def __next__(self) -> tuple[int, int]:
         return next(self._epoch_step_generator)
 
+    def __call__(
+        self, train_dataloader: DataLoader, device: torch.device = torch.device("cpu")
+    ) -> Generator[TrainStep]:
+        """Create training step iterator with Dataloader.
+
+        Args:
+            train_dataloader: DataLoader for training data.
+            device: The processor to use for training. Defaults to CPU.
+
+        Yields:
+            A TrainStep tuple containing the epoch, step, x and y batches.
+
+        """
+        dl_iter = iter(itertools.cycle(train_dataloader))
+        for epoch, step_ in self._epoch_step_generator:
+            x_batch, y_batch = next(dl_iter)
+            yield TrainStep(
+                epoch,
+                step_,
+                x_batch.to(device, non_blocking=True),
+                y_batch.to(device, non_blocking=True),
+            )
+
     @staticmethod
     def _build_epoch_step_generator(
-            epochs: int, steps_per_epoch: int, current_step: int
-        ) -> Generator[tuple[int, int]]:
+        epochs: int, steps_per_epoch: int, current_step: int
+    ) -> Generator[tuple[int, int]]:
         """Build epoch and stp generator.
 
         Args:
@@ -169,12 +189,14 @@ class TrainLoopManager:
             A tuple with the current epoch and step for the iteration.
 
         """
+        current_step -= 1  # fall back to counting from zero as easier to comprehend
+
         total_steps = epochs * steps_per_epoch
         num_remaining_steps_ex_current = total_steps - current_step
 
         steps_left_in_current_epoch = num_remaining_steps_ex_current % steps_per_epoch
         num_whole_epochs_remaining = num_remaining_steps_ex_current // steps_per_epoch
-        current_epoch = (epochs - num_whole_epochs_remaining)
+        current_epoch = epochs - num_whole_epochs_remaining
 
         if steps_left_in_current_epoch > 0:
             for _ in range(steps_per_epoch):
@@ -184,7 +206,10 @@ class TrainLoopManager:
 
         for epoch in range(current_epoch, epochs):
             for _ in range(steps_per_epoch):
-                yield (epoch, current_step)
+                yield (
+                    epoch + 1,
+                    current_step + 1,
+                )  # +1 -> return human friendly values
                 current_step += 1
 
 

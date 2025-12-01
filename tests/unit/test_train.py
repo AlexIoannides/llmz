@@ -16,6 +16,7 @@ from llmz.train import (
     GradientClipCallback,
     LinearWarmupCosineAnnealingLRSchedule,
     TrainLoopManager,
+    TrainStep,
     autoregressive_llm_loss,
     train,
 )
@@ -73,22 +74,45 @@ def test_GradientClipCallback(model: nn.Module, dataloader: DataLoader):
     assert max_grad_before_clip > max_grad_after_clip
 
 
-def test_TrainingLoopManager_generates_epochs_and_steps():
-    loop_manager = TrainLoopManager(epochs=3, steps_per_epoch=2, start_from_step=1)
-    epoch_steps = [e for e in loop_manager]
-    assert epoch_steps == [(1, 1), (1, 2), (2, 3), (2, 4)]
-
-    loop_manager = TrainLoopManager(epochs=3, steps_per_epoch=2, start_from_step=3)
-    epoch_steps = [e for e in loop_manager]
-    assert epoch_steps == [(2, 3), (2, 4)]
-
-
 def test_TrainingLoopManager_raises_invalid_init_value_err():
     exp_err_msg = re.escape(
         "invalid inputs:\n * epochs<=0\n * steps_per_epoch<=0\n * start_from_step<=0"
     )
     with pytest.raises(ValueError, match=exp_err_msg):
         TrainLoopManager(epochs=-1, steps_per_epoch=-1, start_from_step=0)
+
+
+def test_TrainingLoopManager_generates_epochs_and_steps():
+    loop_manager = TrainLoopManager(epochs=3, steps_per_epoch=2, start_from_step=1)
+    epoch_steps = [e for e in loop_manager]
+    assert epoch_steps == [(1, 1), (1, 2), (2, 3), (2, 4), (3, 5), (3, 6)]
+
+    loop_manager = TrainLoopManager(epochs=3, steps_per_epoch=2, start_from_step=3)
+    epoch_steps = [e for e in loop_manager]
+    assert epoch_steps == [(2, 3), (2, 4), (3, 5), (3, 6)]
+
+
+def test_TrainingLoopManager_generates_TrainSteps(dataloader: DataLoader):
+    epochs = 2
+    steps_per_epoch = len(dataloader)
+
+    loop_manager = TrainLoopManager(
+        epochs=epochs, steps_per_epoch=steps_per_epoch, start_from_step=1
+    )
+    train_steps = [train_step for train_step in loop_manager(dataloader)]
+
+    assert len(train_steps) == steps_per_epoch * epochs
+    assert isinstance(train_steps[0], TrainStep)
+
+    assert train_steps[0].step == 1
+    assert train_steps[0].epoch == 1
+
+    assert train_steps[5].step == 6
+    assert train_steps[5].epoch == 2
+
+    # test dataloader has cycled , noting that it's deterministic
+    assert train_steps[0].x.sum() == train_steps[5].x.sum()
+    assert train_steps[0].y.sum() == train_steps[5].y.sum()
 
 
 def test_train_runs_all_steps_end_to_end(
