@@ -83,6 +83,14 @@ def test_TrainingLoopManager_generates_epochs_and_steps():
     assert epoch_steps == [(2, 3), (2, 4)]
 
 
+def test_TrainingLoopManager_raises_invalid_init_value_err():
+    exp_err_msg = re.escape(
+        "invalid inputs:\n * epochs<=0\n * steps_per_epoch<=0\n * start_from_step<=0"
+    )
+    with pytest.raises(ValueError, match=exp_err_msg):
+        TrainLoopManager(epochs=-1, steps_per_epoch=-1, start_from_step=0)
+
+
 def test_train_runs_all_steps_end_to_end(
     model: nn.Module, dataloader: DataLoader, caplog: LogCaptureFixture
 ):

@@ -4,7 +4,7 @@ import logging
 import math
 import sys
 from collections.abc import Callable, Generator
-from typing import Any
+from typing import Any, NamedTuple
 
 import torch
 from torch import nn, optim
@@ -99,6 +99,15 @@ class GradientClipCallback:
         nn.utils.clip_grad_norm_(model.parameters(), max_norm=self.clip_grad_norm)
 
 
+class TrainStep(NamedTuple):
+    """Container class for training step inputs."""
+
+    x: torch.Tensor
+    y: torch.Tensor
+    epoch: int
+    step: int
+
+
 class TrainLoopManager:
     """Manage epoch and step iteration."""
 
@@ -131,7 +140,7 @@ class TrainLoopManager:
         if invalid_args:
             ex = ValueError("invalid inputs:")
             for arg in invalid_args:
-                ex.add_note(f"{arg}")
+                ex.add_note(f" * {arg}<=0")
             raise ex
  
         self._epoch_step_generator = self._build_epoch_step_generator(
