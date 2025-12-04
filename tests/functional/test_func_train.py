@@ -16,6 +16,7 @@ from llmz.generate import generate
 from llmz.gpt2 import GPT2, GPT2Config, GPT2Tokenizer
 from llmz.train import (
     LinearWarmupCosineAnnealingLRSchedule,
+    TrainLoopManager,
     autoregressive_llm_loss,
     train,
 )
@@ -56,6 +57,8 @@ def test_GPT2_train_end_to_end(text_data_file: Path):
 
     model = GPT2(**model_config)
 
+    train_loop = TrainLoopManager(total_epochs, len(train_dl), start_from_step=1)
+
     evals = Evaluator(
         train_dataloader=train_dl,
         val_dataloader=train_dl,
@@ -80,7 +83,7 @@ def test_GPT2_train_end_to_end(text_data_file: Path):
         optimiser=optim,
         lr_schedule=lr_schedule,
         train_dataloader=train_dl,
-        train_epochs=total_epochs,
+        train_loop_manager=train_loop,
         evaluator=evals,
         eval_ckpt_freq_steps=steps_per_epoch,
         ckpt_handler=checkpointer,
