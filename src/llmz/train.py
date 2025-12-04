@@ -104,7 +104,7 @@ class TrainStep(NamedTuple):
     """Container class for training step inputs."""
 
     epoch: int
-    step: int
+    step_num: int
     x: torch.Tensor
     y: torch.Tensor
 
@@ -219,7 +219,7 @@ def train(
     optimiser: optim.Optimizer,
     lr_schedule: Callable[[int], float] | lr_scheduler.LRScheduler,
     train_dataloader: DataLoader,
-    train_epochs: int,
+    train_loop_manager: TrainLoopManager,
     evaluator: Evaluator,
     eval_ckpt_freq_steps: int,
     ckpt_handler: _CheckpointHandler | None = None,
@@ -235,7 +235,7 @@ def train(
         optimiser: The optimizer for updating model parameters.
         lr_schedule: Function to compute learning rate for training step.æ
         train_dataloader: DataLoader for training data.
-        train_epochs: Number of training epochs.
+        train_loop_manager: Handler for iterating over epochs and steps.
         evaluator: A handler for all model evaluations.
         eval_ckpt_freq_steps: Number of steps between evaluations and checkpoint
             persistence.
@@ -251,40 +251,34 @@ def train(
         lr_schedule = lr_scheduler.LambdaLR(optimiser, lr_schedule)
 
     model = model.to(device)
-    step = 0
 
-    for epoch in range(1, train_epochs + 1):
-        for X_batch, y_batch in train_dataloader:
-            X_batch = X_batch.to(device, non_blocking=True)
-            y_batch = y_batch.to(device, non_blocking=True)
+    for step in train_loop_manager(train_dataloader, device):
+        model.train()
+        optimiser.zero_grad()
 
-            step += 1
-            model.train()
-            optimiser.zero_grad()
+        loss = loss_calc(model, step.x, step.y)
+        loss.backward()
 
-            loss = loss_calc(model, X_batch, y_batch)
-            loss.backward()
+        if model_backward_callbacks:
+            for callback in model_backward_callbacks:
+                callback(model)
 
-            if model_backward_callbacks:
-                for callback in model_backward_callbacks:
-                    callback(model)
+        optimiser.step()
+        lr_schedule.step()
 
-            optimiser.step()
-            lr_schedule.step()
+        if step.step_num % log_freq_steps == 0:
+            log.info(f"step={step.step_num}, epoch={step.epoch}")
 
-            if step % log_freq_steps == 0:
-                log.info(f"{step=}, {epoch=}")
-
-            if step % eval_ckpt_freq_steps == 0:
-                evaluator.evaluate(step, model, log)
-                if ckpt_handler:
-                    ckpt_handler.save_checkpoint(
-                        model,
-                        optimiser,
-                        lr_schedule,
-                        step,
-                        {"evals": evaluator[-1].results},
-                    )
+        if step.step_num % eval_ckpt_freq_steps == 0:
+            evaluator.evaluate(step.step_num, model, log)
+            if ckpt_handler:
+                ckpt_handler.save_checkpoint(
+                    model,
+                    optimiser,
+                    lr_schedule,
+                    step.step_num,
+                    {"evals": evaluator[-1].results},
+                )
 
 
 def autoregressive_llm_loss(

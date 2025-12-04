@@ -104,10 +104,10 @@ def test_TrainingLoopManager_generates_TrainSteps(dataloader: DataLoader):
     assert len(train_steps) == steps_per_epoch * epochs
     assert isinstance(train_steps[0], TrainStep)
 
-    assert train_steps[0].step == 1
+    assert train_steps[0].step_num == 1
     assert train_steps[0].epoch == 1
 
-    assert train_steps[5].step == 6
+    assert train_steps[5].step_num == 6
     assert train_steps[5].epoch == 2
 
     # test dataloader has cycled , noting that it's deterministic
@@ -126,12 +126,17 @@ def test_train_runs_all_steps_end_to_end(
     mock_evaluator = Mock(Evaluator)
     mock_callback = Mock(GradientClipCallback)
 
-    epochs = 2
-    steps_per_epoch = len(dataloader)
+    mock_train_loop_manager = Mock(TrainLoopManager)
+    mock_train_loop_manager.return_value = [
+        TrainStep(epoch, epoch_step + (epoch - 1) * len(dataloader), batch[0], batch[1])
+        for epoch in range(1, 3)
+        for epoch_step, batch in enumerate(dataloader, start=1)
+    ]
+
     eval_freq = 5
     log_freq = 2
 
-    total_steps = epochs * steps_per_epoch
+    total_steps = len(mock_train_loop_manager.return_value)
 
     assert all(p.grad is None for p in model.parameters())
 
@@ -143,7 +148,7 @@ def test_train_runs_all_steps_end_to_end(
             optimiser=mock_optimiser,
             lr_schedule=mock_lr_schedule,
             train_dataloader=dataloader,
-            train_epochs=epochs,
+            train_loop_manager=mock_train_loop_manager,
             model_backward_callbacks=[mock_callback, mock_callback],
             eval_ckpt_freq_steps=eval_freq,
             evaluator=mock_evaluator,
@@ -172,7 +177,7 @@ def test_train_runs_all_steps_end_to_end(
             optimiser=mock_optimiser,
             lr_schedule=mock_lr_schedule,
             train_dataloader=dataloader,
-            train_epochs=epochs,
+            train_loop_manager=mock_train_loop_manager,
             model_backward_callbacks=None,
             eval_ckpt_freq_steps=eval_freq,
             evaluator=mock_evaluator,
